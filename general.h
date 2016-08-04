@@ -16,6 +16,8 @@ extern void cc_buf_str_addc(cc_buf_s *b, int c);
 extern void cc_buf_str_addstr(cc_buf_s *buf, const char *str, size_t n);
 extern void cc_buf_destroy(cc_buf_s *bf);
 
+extern cc_buf_s cc_read_file(const char *fname);
+
 /* 
  * The usual malloc wrappers
  */

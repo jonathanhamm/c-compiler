@@ -45,6 +45,22 @@ void cc_buf_destroy(cc_buf_s *b) {
 	free(b->buf);
 }
 
+
+cc_buf_s cc_read_file(const char *fname) {
+	int c;
+	FILE *f;
+	cc_buf_s buf;
+
+	cc_buf_init(&buf);
+	
+	f = fopen(fname, "r");
+	while((c = fgetc(f)) != EOF)
+		cc_buf_str_addc(&buf, c);
+	cc_buf_str_addc(&buf, '\0');
+	fclose(f);
+	return buf;
+}
+
 void *cc_alloc(size_t len) {
 	void *p = malloc(len);
 	if(!p) {
