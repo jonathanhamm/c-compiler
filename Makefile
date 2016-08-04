@@ -1,2 +1,2 @@
 out:
-	cc -ggdb main.c -o mcc
+	cc -ggdb general.c main.c -o mcc

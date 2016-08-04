@@ -1,3 +1,4 @@
 mcc
 *.dSYM
 *.pyc
+*.swp
