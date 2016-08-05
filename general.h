@@ -1,5 +1,5 @@
-#ifndef cc_general_h_
-#define cc_general_h_
+#ifndef _cc_general_h_
+#define _cc_general_h_
 
 #include <stdlib.h>
 

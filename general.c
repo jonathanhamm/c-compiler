@@ -23,11 +23,12 @@ void cc_buf_str_addc(cc_buf_s *b, int c) {
 }
 
 void cc_buf_str_addstr(cc_buf_s *b, const char *str, size_t n) {
-	char *buf = b->buf;
+	size_t i;
 	size_t size = b->size, 
 	       bsize = b->bsize,
 	       nsize = size + n;
-
+	char *buf = b->buf, *dst = &buf[size];
+	
 	if(nsize >= bsize) {
 		do {
 			bsize *= 2;
@@ -37,7 +38,10 @@ void cc_buf_str_addstr(cc_buf_s *b, const char *str, size_t n) {
 		buf = cc_realloc(buf, bsize);
 		b->buf = buf;
 	}
-	strcpy(&buf[size], str);
+	//strcpy(&buf[size], str);
+	for(i = 0; i < n; i++) {
+		*dst++ = *str++;	
+	}
 	b->size = nsize;
 }
 
@@ -50,14 +54,23 @@ cc_buf_s cc_read_file(const char *fname) {
 	int c;
 	FILE *f;
 	cc_buf_s buf;
-
-	cc_buf_init(&buf);
+	
 	
 	f = fopen(fname, "r");
-	while((c = fgetc(f)) != EOF)
-		cc_buf_str_addc(&buf, c);
-	cc_buf_str_addc(&buf, '\0');
-	fclose(f);
+	if(f) {
+		cc_buf_init(&buf);
+		
+		while((c = fgetc(f)) != EOF)
+			cc_buf_str_addc(&buf, c);
+		cc_buf_str_addc(&buf, '\0');
+		fclose(f);
+	}
+	else {
+		perror("Error opening file");
+		buf.size = 0;
+		buf.bsize = 0;
+		buf.buf = NULL;
+	}
 	return buf;
 }
 
