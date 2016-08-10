@@ -2,6 +2,7 @@
 #define _cc_general_h_
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 typedef struct cc_buf_s cc_buf_s;
 

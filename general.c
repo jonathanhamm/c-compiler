@@ -38,7 +38,6 @@ void cc_buf_str_addstr(cc_buf_s *b, const char *str, size_t n) {
 		buf = cc_realloc(buf, bsize);
 		b->buf = buf;
 	}
-	//strcpy(&buf[size], str);
 	for(i = 0; i < n; i++) {
 		*dst++ = *str++;	
 	}
