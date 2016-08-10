@@ -136,7 +136,7 @@ bool cc_pp_ishex(char c) {
 
 bool cc_pp_ishexquad(char *fptr) {
 	return cc_pp_ishex(*fptr) && cc_pp_ishex(*(fptr + 1))
-		&& cc_pp_ishex(*(fptr + 2)) && cc_pp_ishex(*(fptr + 2));
+		&& cc_pp_ishex(*(fptr + 2)) && cc_pp_ishex(*(fptr + 3));
 }
 
 char *cc_pp_isunicn(char *fptr) {
@@ -181,6 +181,7 @@ char *cc_pp_identifier(char *fptr) {
 
 	if(isalpha(*fptr) || *fptr == '_') {
 		r = cc_pp_identifier_suffix(fptr + 1);
+		
 	}
 	else if((r = cc_pp_isunicn(fptr))) {
 		r = cc_pp_identifier_suffix(r); 
