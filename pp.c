@@ -4,7 +4,7 @@
 #include <assert.h>
 
 static cc_buf_s cc_pp_trigraph_lines(cc_buf_s src);
-static void cc_pp_lex(cc_buf_s src);
+static cc_pp_toklist_s cc_pp_lex(cc_buf_s src);
 static bool cc_pp_ishex(char c);
 static bool cc_pp_ishexquad(char *fptr);
 static char *cc_pp_isunicn(char *fptr);
@@ -12,15 +12,16 @@ static char *cc_pp_isunicn(char *fptr);
 static char *cc_pp_identifier_suffix();
 static char *cc_pp_identifier(char *fptr);
 
-static void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, cc_pp_toktype_e type, cc_pp_tokatt_e att, unsigned lineno);
+static void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, cc_pp_toktype_e type, cc_pp_tokatt_e att);
 static void cc_pp_printtok(cc_pp_toklist_s *list);
 
 cc_buf_s cc_pp_parse(cc_buf_s src) {
 	cc_buf_s phase12;
-
+	cc_pp_toklist_s list;
 
 	phase12 = cc_pp_trigraph_lines(src);
-	cc_pp_lex(phase12);
+	list = cc_pp_lex(phase12);
+	cc_pp_printtok(&list);
 	return phase12;
 }
 
@@ -98,27 +99,50 @@ cc_buf_s cc_pp_trigraph_lines(cc_buf_s src) {
 	return result;
 }
 
-void cc_pp_lex(cc_buf_s src) {
+cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 	char bck;
 	char *ccheck;
 	char *bptr = src.buf, *fptr = bptr;
-	unsigned lineno = 1;
 	cc_pp_toklist_s list = {
 		.head = NULL,
 		.tail = NULL
 	};
+
 	while(*fptr) {
 		switch(*fptr) {
 			case '\n':
-				lineno++;
+				cc_pp_addtok(&list, "newline", CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
 				fptr++;
+				break;
+			case ' ':
+			case '\t':
+			case '\v':
+				do {
+					fptr++;
+				}
+				while( *fptr == ' ' || *fptr == '\t' || *fptr == '\v');
+				cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
+				break;
+			case '/':
+				if(*(fptr + 1) == '/') {
+					fptr += 2;
+					while(*fptr != '\n')
+						fptr++;
+					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
+				}
+				else if(*(fptr + 1) == '*') {
+					do {
+						fptr++;
+					}
+					while(!(*fptr == '*' && *(fptr + 1) == '/'));
+				}
 				break;
 			default:
 				bptr = fptr;
 				if((fptr = cc_pp_identifier(fptr))) {
 					bck = *fptr;
 					*fptr = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_IDENTIFIER, CCPP_ATT_DEFAULT, lineno);
+					cc_pp_addtok(&list, bptr, CCPP_IDENTIFIER, CCPP_ATT_DEFAULT);
 					*fptr = bck;
 				}
 				else {
@@ -128,6 +152,7 @@ void cc_pp_lex(cc_buf_s src) {
 				break;
 		}
 	}
+	return list;
 }
 
 bool cc_pp_ishex(char c) {
@@ -189,16 +214,14 @@ char *cc_pp_identifier(char *fptr) {
 	return r;
 }
 
-void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, cc_pp_toktype_e type, cc_pp_tokatt_e att, unsigned lineno) {
+void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, cc_pp_toktype_e type, cc_pp_tokatt_e att) {
 	cc_pp_tok_s *t = cc_alloc(sizeof *t);
 
-	t->lex = lexeme;
+	t->lex = dupstr(lexeme);
 	t->type = type;
 	t->att = att;
-	t->lineno = lineno;
 	t->next = NULL;
 
-	printf("Adding token: %s\n", lexeme);
 	if(list->head) {
 		list->tail->next = t;
 	}

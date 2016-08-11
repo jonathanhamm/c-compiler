@@ -19,6 +19,8 @@ extern void cc_buf_destroy(cc_buf_s *bf);
 
 extern cc_buf_s cc_read_file(const char *fname);
 
+extern char *dupstr(char *src);
+
 /* 
  * The usual malloc wrappers
  */

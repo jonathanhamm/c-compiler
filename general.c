@@ -48,12 +48,10 @@ void cc_buf_destroy(cc_buf_s *b) {
 	free(b->buf);
 }
 
-
 cc_buf_s cc_read_file(const char *fname) {
 	int c;
 	FILE *f;
 	cc_buf_s buf;
-	
 	
 	f = fopen(fname, "r");
 	if(f) {
@@ -71,6 +69,13 @@ cc_buf_s cc_read_file(const char *fname) {
 		buf.buf = NULL;
 	}
 	return buf;
+}
+
+char *dupstr(char *str) {
+	size_t size = strlen(str) + 1;
+	char *nstr = cc_alloc(size);
+	strcpy(nstr, str);
+	return nstr;
 }
 
 void *cc_alloc(size_t len) {
