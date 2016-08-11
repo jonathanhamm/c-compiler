@@ -111,7 +111,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 	while(*fptr) {
 		switch(*fptr) {
 			case '\n':
-				cc_pp_addtok(&list, "newline", CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
+				cc_pp_addtok(&list, "lf", CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
 				fptr++;
 				break;
 			case ' ':
@@ -139,10 +139,35 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				break;
 			default:
 				bptr = fptr;
-				if((fptr = cc_pp_identifier(fptr))) {
-					bck = *fptr;
+				if((ccheck = cc_pp_identifier(fptr))) {
+					bck = *ccheck;
 					*fptr = '\0';
 					cc_pp_addtok(&list, bptr, CCPP_IDENTIFIER, CCPP_ATT_DEFAULT);
+					*ccheck = bck;
+					fptr = ccheck;
+				}
+				else if(isdigit(*fptr) || (*fptr == '.' && isdigit(*(fptr + 1)))) {
+					while(true) {
+						if(isdigit(*fptr) || *fptr == '.') {
+							fptr++;	
+						}
+						else if((*fptr == 'e' || *fptr == 'E' || *fptr == 'p' || *fptr == 'P') 
+								&& (*(fptr + 1) == '-' || *(fptr + 1) == '+')) {
+							fptr += 2;
+						}
+						else if(isalpha(*fptr) || *fptr == '_') {
+							fptr++;
+						}
+						else if((ccheck = cc_pp_isunicn(fptr))) {
+							fptr = ccheck;
+						}
+						else {
+							break;
+						}
+					}
+					bck = *fptr;
+					*fptr = '\0';
+					cc_pp_addtok(&list, bptr, CCPP_NUMBER, CCPP_ATT_DEFAULT);
 					*fptr = bck;
 				}
 				else {
