@@ -1,10 +1,12 @@
 #include "general.h"
-#include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 enum {
 	INIT_BUF_SIZE = 512
 };
+
+static FILE *logfile; 
 
 void cc_buf_init(cc_buf_s *b) {
 	b->size = 0;
@@ -76,6 +78,18 @@ char *dupstr(char *str) {
 	char *nstr = cc_alloc(size);
 	strcpy(nstr, str);
 	return nstr;
+}
+
+void init_log(FILE *f) {
+	logfile = f;
+}
+
+void cc_log(const char *format, ...) {
+	va_list args;
+
+	va_start(args, format);
+	vfprintf(logfile, format, args);
+	va_end(args);
 }
 
 void *cc_alloc(size_t len) {

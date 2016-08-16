@@ -103,6 +103,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 	char bck;
 	char *ccheck;
 	char *bptr = src.buf, *fptr = bptr;
+	unsigned lineno = 1;
 	cc_pp_toklist_s list = {
 		.head = NULL,
 		.tail = NULL
@@ -111,6 +112,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 	while(*fptr) {
 		switch(*fptr) {
 			case '\n':
+				lineno++;
 				cc_pp_addtok(&list, "lf", CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
 				fptr++;
 				break;
@@ -120,7 +122,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				do {
 					fptr++;
 				}
-				while( *fptr == ' ' || *fptr == '\t' || *fptr == '\v');
+				while(*fptr == ' ' || *fptr == '\t' || *fptr == '\v');
 				cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
 				break;
 			case '/':
@@ -132,16 +134,88 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				}
 				else if(*(fptr + 1) == '*') {
 					do {
+						if(*fptr == '\n')
+							lineno++;
 						fptr++;
 					}
-					while(!(*fptr == '*' && *(fptr + 1) == '/'));
+					while(*fptr && !(*fptr == '*' && *(fptr + 1) == '/'));
+					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
 				}
+				break;
+			case '<':
+				bptr = fptr;
+				do {
+					fptr++;
+					switch(*fptr) {
+						case '\'':
+							cc_log_err("UDF - ' in h-char sequence.\n", "");
+							break;
+						case '\\':
+							cc_log_err("UDF - \\ in h-char sequence.\n", "");
+							break;
+
+						case '/':
+							if(*(fptr + 1) == '/') {
+								cc_log_err("UDF - // in h-char sequence.\n", "");
+							}
+							else if(*(fptr + 1) == '*') {
+								cc_log_err("UDF - /* in h-char sequence.\n", "");
+							}
+							break;
+						case '\n':
+							lineno++;
+							cc_log_err("Illegal \\n in h-char sequence.\n", "");
+							break;
+						default:
+							break;
+					}
+				} 
+				while(*fptr && *fptr != '>');
+				fptr++;
+				bck = *fptr;
+				*fptr = '\0';
+				cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_DEFAULT);
+				*fptr = bck;
+				break;
+			case '"':
+				bptr = fptr;
+				do {
+					fptr++;
+					switch(*fptr) {
+						case '\'':
+							cc_log_err("UDF - ' in q-char sequence.\n", "");
+							break;
+						case '\\':
+							cc_log_err("UDF - \\ in q-char sequence.\n", "");
+							break;
+						case '/':
+							if(*(fptr + 1) == '/') {
+								cc_log_err("UDF - // in q-char sequence.\n", "");
+							}
+							else if(*(fptr + 1) == '*') {
+								cc_log_err("UDF - /* in q-char sequence.\n", "");
+							}
+							break;
+						case '\n':
+							lineno++;
+							cc_log_err("Illegal \\n in q-char sequence.\n", "");
+							break;
+						default:
+							break;
+					}
+				}
+				while(*fptr && *fptr != '"');
+				fptr++;
+				bck = *fptr;
+				*fptr = '\0';
+				cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_DEFAULT);
+				*fptr = bck;
 				break;
 			default:
 				bptr = fptr;
 				if((ccheck = cc_pp_identifier(fptr))) {
 					bck = *ccheck;
-					*fptr = '\0';
+					*ccheck = '\0';
 					cc_pp_addtok(&list, bptr, CCPP_IDENTIFIER, CCPP_ATT_DEFAULT);
 					*ccheck = bck;
 					fptr = ccheck;
@@ -171,7 +245,6 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					*fptr = bck;
 				}
 				else {
-					fptr = bptr;
 					fptr++;
 				}
 				break;

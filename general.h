@@ -1,6 +1,7 @@
 #ifndef _cc_general_h_
 #define _cc_general_h_
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -19,7 +20,13 @@ extern void cc_buf_destroy(cc_buf_s *bf);
 
 extern cc_buf_s cc_read_file(const char *fname);
 
-extern char *dupstr(char *src);
+extern char *dupstr(char *str);
+
+extern void init_log(FILE *f);
+extern void cc_log(const char *format, ...);
+
+#define cc_log_err(fmt,...)	cc_log("ERROR:\t%u\t" fmt, lineno, __VA_ARGS__)
+
 
 /* 
  * The usual malloc wrappers

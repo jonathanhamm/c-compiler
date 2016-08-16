@@ -29,7 +29,6 @@ struct cc_pp_tok_s {
 	cc_pp_toktype_e type;
 	cc_pp_tokatt_e att;
 	char *lex;
-	unsigned lineno;
 	cc_pp_tok_s *next;
 };
 
