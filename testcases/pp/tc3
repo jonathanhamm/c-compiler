@@ -30,6 +30,12 @@
 
 #include "general.h"
 
+//comment 1
+
+"hah" /* comment */ <doohooo> //ahahaha
+
+/*haha*/ /*/ /**/ <hello>
+
 
 #include "\ahah/*"
 

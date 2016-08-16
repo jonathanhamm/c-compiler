@@ -133,13 +133,18 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
 				}
 				else if(*(fptr + 1) == '*') {
-					do {
-						if(*fptr == '\n')
+					fptr += 2;
+					while(*fptr && !(*fptr == '*' && *(fptr + 1) == '/')) {
+						if(*fptr == '\n') {
 							lineno++;
+							cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
+						}
 						fptr++;
 					}
-					while(*fptr && !(*fptr == '*' && *(fptr + 1) == '/'));
 					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
+				}
+				else {
+					fptr++;
 				}
 				break;
 			case '<':
