@@ -131,51 +131,82 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
 				break;
 			case '[':
+				cc_pp_addtok(&list, "[", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+				fptr++;
 				break;
-			case ']':
+			case ']':	
+				cc_pp_addtok(&list, "]", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACKET);
+				fptr++;
 				break;
 			case '(':
+				cc_pp_addtok(&list, "(", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_PAREN);
+				fptr++;
 				break;
 			case ')':
+				cc_pp_addtok(&list, ")", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_PAREN);
+				fptr++;
 				break;
 			case '{':
+				cc_pp_addtok(&list, "{", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACE);
+				fptr++;
 				break;
 			case '}':
+				cc_pp_addtok(&list, "}", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACE);
+				fptr++;
 				break;
 			case '.':
 				if(*(fptr + 1) == '.' && *(fptr + 2) == '.') {
-					
+					cc_pp_addtok(&list, "...", CCPP_PUNCTUATOR, CCPP_ATT_VARARG);
+					fptr += 3;
 				}
 				else {
-				
+					cc_pp_addtok(&list, ".", CCPP_PUNCTUATOR, CCPP_ATT_DOT);
+					fptr++;
 				}
 				break;
 			case '-':
 				if(*(fptr + 1) == '>') {
-				
+					cc_pp_addtok(&list, "->", CCPP_PUNCTUATOR, CCPP_ATT_ARROW);
+					fptr += 2;
 				}
 				else if(*(fptr + 1) == '-') {
-				
+					cc_pp_addtok(&list, "--", CCPP_PUNCTUATOR, CCPP_ATT_AUTODEC);
+					fptr += 2;
 				}
 				else {
-				
+					cc_pp_addtok(&list, "-", CCPP_PUNCTUATOR, CCPP_ATT_MINUS);
+					fptr++;
 				}
 				break;
 			case '*':
+				cc_pp_addtok(&list, "*", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+				fptr++;
 				break;
 			case '+':
 				if(*(fptr + 1) == '+') {
+					cc_pp_addtok(&list, "++", CCPP_PUNCTUATOR, CCPP_ATT_AUTOINC);
+					fptr += 2;
 				}
 				else {
+					cc_pp_addtok(&list, "+", CCPP_PUNCTUATOR, CCPP_ATT_PLUS);
+					fptr++;
 				}
 				break;
 			case '&':
+				cc_pp_addtok(&list, "&", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+				fptr++;
 				break;
 			case '~':
+				cc_pp_addtok(&list, "~", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+				fptr++;
 				break;
 			case '!':
+				cc_pp_addtok(&list, "!", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+				fptr++;
 				break;
 			case '%':
+				cc_pp_addtok(&list, "!", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+				fptr++;
 				break;
 			case '/':
 				if(*(fptr + 1) == '/') {
@@ -270,9 +301,13 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					*fptr = bck;
 				}
 				else {
-					fptr = cc_pp_schar_seq(fptr, lineno);		
-					if(!fptr) {
+					ccheck = cc_pp_schar_seq(fptr, lineno);		
+					if(ccheck) {
+						fptr = ccheck;
+					}
+					else {
 						cc_log_err("Failed attempt to parse string literal.\n", "");
+						fptr++;
 					}
 				}
 				break;
