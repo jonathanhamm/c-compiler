@@ -179,8 +179,14 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				}
 				break;
 			case '*':
-				cc_pp_addtok(&list, "*", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
-				fptr++;
+				if(*(fptr + 1) == '=') {
+					cc_pp_addtok(&list, "*=", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGNMULT);
+					fptr+=2;
+				}
+				else {
+					cc_pp_addtok(&list, "*", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+					fptr++;
+				}
 				break;
 			case '+':
 				if(*(fptr + 1) == '+') {
@@ -193,16 +199,29 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				}
 				break;
 			case '&':
-				cc_pp_addtok(&list, "&", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
-				fptr++;
+				if(*(fptr + 1) == '&') {
+					cc_pp_addtok(&list, "&", CCPP_PUNCTUATOR, CCPP_ATT_LOGAND);
+				}
+				else if(*(fptr + 1) == '=') {
+				}
+				else {
+					cc_pp_addtok(&list, "&", CCPP_PUNCTUATOR, CCPP_ATT_AMP);
+					fptr++;
+				}
 				break;
 			case '~':
-				cc_pp_addtok(&list, "~", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+				cc_pp_addtok(&list, "~", CCPP_PUNCTUATOR, CCPP_ATT_BITNOT);
 				fptr++;
 				break;
 			case '!':
-				cc_pp_addtok(&list, "!", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
-				fptr++;
+				if(*(fptr + 1) == '=') {
+					cc_pp_addtok(&list, "!=", CCPP_PUNCTUATOR, CCPP_ATT_NEQ);
+					fptr += 2;
+				}
+				else {
+					cc_pp_addtok(&list, "!", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+					fptr++;
+				}
 				break;
 			case '%':
 				cc_pp_addtok(&list, "!", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
@@ -226,44 +245,122 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					}
 					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
 				}
+				else if(*(fptr + 1) == '=') {
+					cc_pp_addtok(&list, "/=", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGNDIV);
+					fptr += 2;
+				}
 				else {
+					cc_pp_addtok(&list, "/", CCPP_PUNCTUATOR, CCPP_ATT_DIV);
 					fptr++;
 				}
 				break;
 			case '<':
-				bptr = fptr;
-				do {
-					fptr++;
-					switch(*fptr) {
-						case '\'':
-							cc_log_err("UDF - ' in h-char sequence.\n", "");
-							break;
-						case '\\':
-							cc_log_err("UDF - \\ in h-char sequence.\n", "");
-							break;
+				if(cc_pp_is_hname(list.tail)) {
+					bptr = fptr;
+					do {
+						fptr++;
+						switch(*fptr) {
+							case '\'':
+								cc_log_err("UDF - ' in h-char sequence.\n", "");
+								break;
+							case '\\':
+								cc_log_err("UDF - \\ in h-char sequence.\n", "");
+								break;
 
-						case '/':
-							if(*(fptr + 1) == '/') {
-								cc_log_err("UDF - // in h-char sequence.\n", "");
-							}
-							else if(*(fptr + 1) == '*') {
-								cc_log_err("UDF - /* in h-char sequence.\n", "");
-							}
-							break;
-						case '\n':
-							lineno++;
-							cc_log_err("Illegal \\n in h-char sequence.\n", "");
-							break;
-						default:
-							break;
-					}
-				} 
-				while(*fptr && *fptr != '>');
+							case '/':
+								if(*(fptr + 1) == '/') {
+									cc_log_err("UDF - // in h-char sequence.\n", "");
+								}
+								else if(*(fptr + 1) == '*') {
+									cc_log_err("UDF - /* in h-char sequence.\n", "");
+								}
+								break;
+							case '\n':
+								lineno++;
+								cc_log_err("Illegal \\n in h-char sequence.\n", "");
+								break;
+							default:
+								break;
+						}
+					} 
+					while(*fptr && *fptr != '>');
+					fptr++;
+					bck = *fptr;
+					*fptr = '\0';
+					cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_DEFAULT);
+					*fptr = bck;
+				}
+				else if(*(fptr + 1) == '<') {
+					cc_pp_addtok(&list, "<<", CCPP_PUNCTUATOR, CCPP_ATT_LSHIFT);
+					fptr += 2;
+				}
+				else if(*(fptr + 1) == '=') {
+					cc_pp_addtok(&list, "<=", CCPP_PUNCTUATOR, CCPP_ATT_LEQ);
+					fptr += 2;
+				}
+				else {
+					cc_pp_addtok(&list, "<", CCPP_PUNCTUATOR, CCPP_ATT_LE);
+					fptr++;
+				}
+				break;
+			case '>':
+				if(*(fptr + 1) == '>') {
+					cc_pp_addtok(&list, ">>", CCPP_PUNCTUATOR, CCPP_ATT_RSHIFT);
+					fptr += 2;
+				}
+				else if(*(fptr + 1) == '=') {
+					cc_pp_addtok(&list, ">=", CCPP_PUNCTUATOR, CCPP_ATT_GE);
+				}
+				else {
+					cc_pp_addtok(&list, ">", CCPP_PUNCTUATOR, CCPP_ATT_GE);
+					fptr++;
+				}
+				break;
+			case '=':
+				if(*(fptr + 1) == '=') {
+					cc_pp_addtok(&list, "==", CCPP_PUNCTUATOR, CCPP_ATT_EQ);
+					fptr += 2;
+				}
+				else {
+					cc_pp_addtok(&list, ">", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN);
+					fptr++;
+				}
+				break;
+			case '^':
+				if(*(fptr + 1) == '=') {
+					cc_pp_addtok(&list, "^=", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN_XOR);
+					fptr += 2;
+				}
+				else {
+					cc_pp_addtok(&list, "^", CCPP_PUNCTUATOR, CCPP_ATT_XOR);
+					fptr++;
+				}
+				break;
+			case '|':
+				if(*(fptr + 1) == '|') {
+					cc_pp_addtok(&list, "||", CCPP_PUNCTUATOR, CCPP_ATT_LOGOR);
+					fptr += 2;
+				}
+				else if(*(fptr + 1) == '=') {
+					cc_pp_addtok(&list, "|=", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN_BITOR);
+					fptr += 2;
+				}
+				else {
+					cc_pp_addtok(&list, "|", CCPP_PUNCTUATOR, CCPP_ATT_BITOR);
+					fptr++;
+				}
+				break;
+			case '?':
+				cc_pp_addtok(&list, "?", CCPP_PUNCTUATOR, CCPP_ATT_TERNARY);
 				fptr++;
-				bck = *fptr;
-				*fptr = '\0';
-				cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_DEFAULT);
-				*fptr = bck;
+				break;
+			case ':':
+				cc_pp_addtok(&list, ":", CCPP_PUNCTUATOR, CCPP_ATT_COLON);
+				fptr++;
+				break;
+			case ';':
+				cc_pp_addtok(&list, ";", CCPP_PUNCTUATOR, CCPP_ATT_SEMICOLON);
+				fptr++;
 				break;
 			case '"':
 				if(cc_pp_is_hname(list.tail)) {
