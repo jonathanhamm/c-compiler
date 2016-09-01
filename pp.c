@@ -224,8 +224,24 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				}
 				break;
 			case '%':
-				cc_pp_addtok(&list, "!", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
-				fptr++;
+				if(*(fptr + 1) == '>') {
+					cc_pp_addtok(&list, "}", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACE);
+					fptr += 2;
+				}
+				else if(*(fptr + 1) == ':') {
+					if(*(fptr + 2) == '%' && *(fptr + 3) == ':') {
+						cc_pp_addtok(&list, "##", CCPP_PUNCTUATOR, CCPP_ATT_2HASH);
+						fptr += 4;
+					}
+					else {
+						cc_pp_addtok(&list, "#", CCPP_PUNCTUATOR, CCPP_ATT_HASH);
+						fptr += 2;
+					}
+				}
+				else {
+					cc_pp_addtok(&list, "%", CCPP_PUNCTUATOR, CCPP_ATT_MOD);
+					fptr++;
+				}	
 				break;
 			case '/':
 				if(*(fptr + 1) == '/') {
@@ -298,6 +314,14 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					cc_pp_addtok(&list, "<=", CCPP_PUNCTUATOR, CCPP_ATT_LEQ);
 					fptr += 2;
 				}
+				else if(*(fptr + 1) == ':') {
+					cc_pp_addtok(&list, "[", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+					fptr += 2;
+				}
+				else if(*(fptr + 1) == '%') {
+					cc_pp_addtok(&list, "{", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACE);
+					fptr += 2;
+				}
 				else {
 					cc_pp_addtok(&list, "<", CCPP_PUNCTUATOR, CCPP_ATT_LE);
 					fptr++;
@@ -355,12 +379,32 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				fptr++;
 				break;
 			case ':':
-				cc_pp_addtok(&list, ":", CCPP_PUNCTUATOR, CCPP_ATT_COLON);
-				fptr++;
+				if(*(fptr + 1) == '>') {
+					cc_pp_addtok(&list, "]", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACKET);
+					fptr += 2;
+				}
+				else {
+					cc_pp_addtok(&list, ":", CCPP_PUNCTUATOR, CCPP_ATT_COLON);
+					fptr++;
+				}
 				break;
 			case ';':
 				cc_pp_addtok(&list, ";", CCPP_PUNCTUATOR, CCPP_ATT_SEMICOLON);
 				fptr++;
+				break;
+			case ',':
+				cc_pp_addtok(&list, ",", CCPP_PUNCTUATOR, CCPP_ATT_COMMA);
+				fptr++;
+				break;
+			case '#':
+				if(*(fptr + 1) == '#') {
+					cc_pp_addtok(&list, "##", CCPP_PUNCTUATOR, CCPP_ATT_2HASH);
+					fptr +=2;
+				}
+				else {
+					cc_pp_addtok(&list, "#", CCPP_PUNCTUATOR, CCPP_ATT_HASH);
+					fptr++;
+				}
 				break;
 			case '"':
 				if(cc_pp_is_hname(list.tail)) {
