@@ -18,7 +18,9 @@ static void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, cc_pp_toktype_e ty
 static void cc_pp_printtok(cc_pp_toklist_s *list);
 
 static bool cc_pp_is_hname(cc_pp_tok_s *tail);
+static char *cc_pp_escape_seq(char *fptr, unsigned lineno);
 static char *cc_pp_schar_seq(char *fptr, unsigned lineno);
+static char *cc_pp_cchar_seq(char *fptr, unsigned lineno);
 
 cc_buf_s cc_pp_parse(cc_buf_s src) {
 	cc_buf_s phase12;
@@ -334,6 +336,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				}
 				else if(*(fptr + 1) == '=') {
 					cc_pp_addtok(&list, ">=", CCPP_PUNCTUATOR, CCPP_ATT_GE);
+					fptr += 2;
 				}
 				else {
 					cc_pp_addtok(&list, ">", CCPP_PUNCTUATOR, CCPP_ATT_GE);
@@ -406,6 +409,96 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					fptr++;
 				}
 				break;
+			case 'u':
+				bptr = fptr;
+				if(*(fptr + 1) == '8') {
+					fptr++;
+				}
+				if(*(fptr + 1) == '"') {
+					ccheck = cc_pp_schar_seq(fptr + 2, lineno);
+					if(ccheck) {
+						fptr = ccheck;
+						bck = *fptr;
+						*fptr = '\0';
+						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_DEFAULT);
+						*fptr = bck;
+					}
+					else {
+						cc_log_err("Failed attempt to parse string literal.\n", "");
+						fptr++;
+					}
+				}
+				else if(*(fptr + 1) == '\'') {
+					ccheck = cc_pp_cchar_seq(fptr + 2, lineno);
+					if(ccheck) {
+						fptr = ccheck;
+						bck = *fptr;
+						*fptr = '\0';
+						cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_DEFAULT);
+						*fptr = bck;
+					}
+					else {
+						cc_log_err("Failed attempt to parse string literal.\n", "");
+						fptr++;
+					}
+				}
+				else {
+					if(*fptr == '8')
+						fptr--;
+					goto ccpp_default;
+				}
+				break;
+			case 'U':
+			case 'L':
+				if(*(fptr + 1) == '"') {
+					bptr = fptr;
+					ccheck = cc_pp_schar_seq(fptr + 1, lineno);		
+					if(ccheck) {
+						fptr = ccheck;
+						bck = *fptr;
+						*fptr = '\0';
+						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_DEFAULT);
+						*fptr = bck;
+					}
+					else {
+						cc_log_err("Failed attempt to parse string literal.\n", "");
+						fptr++;
+					}
+				}
+				else if(*(fptr + 1) == '\'') {
+					bptr = fptr;
+					ccheck = cc_pp_cchar_seq(fptr + 1, lineno);
+					if(ccheck) {
+						fptr = ccheck;
+						bck = *fptr;
+						*fptr = '\0';
+						cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_DEFAULT);
+						*fptr = bck;
+					}
+					else {
+						cc_log_err("Failed attempt to parse character constant.\n", "");
+						fptr++;
+					}
+				}
+				else {
+					goto ccpp_default; 
+				}
+				break;
+			case '\'':
+				bptr = fptr;
+				ccheck = cc_pp_cchar_seq(fptr + 1, lineno);
+				if(ccheck) {
+					fptr = ccheck;
+					bck = *fptr;
+					*fptr = '\0';
+					cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_DEFAULT);
+					*fptr = bck;
+				}
+				else {
+					cc_log_err("Failed attempt to parse character constant.\n", "");
+					fptr++;
+				}
+				break;
 			case '"':
 				if(cc_pp_is_hname(list.tail)) {
 					bptr = fptr;
@@ -442,9 +535,14 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					*fptr = bck;
 				}
 				else {
-					ccheck = cc_pp_schar_seq(fptr, lineno);		
+					bptr = fptr;
+					ccheck = cc_pp_schar_seq(fptr + 1, lineno);		
 					if(ccheck) {
 						fptr = ccheck;
+						bck = *fptr;
+						*fptr = '\0';
+						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_DEFAULT);
+						*fptr = bck;
 					}
 					else {
 						cc_log_err("Failed attempt to parse string literal.\n", "");
@@ -453,6 +551,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 				}
 				break;
 			default:
+ccpp_default:
 				bptr = fptr;
 				if((ccheck = cc_pp_identifier(fptr, lineno))) {
 					bck = *ccheck;
@@ -615,75 +714,91 @@ bool cc_pp_is_hname(cc_pp_tok_s *tail) {
 	return false;
 }
 
+char *cc_pp_escape_seq(char *fptr, unsigned lineno) {
+	char *ccheck;
+	switch(*(fptr + 1)) {
+		case '\'':
+			fptr++;
+			break;
+		case '"':
+			fptr++;
+			break;
+		case '?':
+			fptr++;
+			break;
+		case '\\':
+			if(cc_pp_isoct(*(fptr + 1))) {
+				fptr++;
+				if(cc_pp_isoct(*(fptr + 2))) {
+					fptr++;
+					if(cc_pp_isoct(*(fptr + 3))) {
+						fptr++;
+					}
+				}
+			}
+			else if(*(fptr + 1) == 'x') {
+				if(cc_pp_ishex(*++fptr)) {
+					while(cc_pp_ishex(*++fptr));
+				}
+				else {
+					cc_log_err("UDF - \\x not followed by hex digits.", "");
+				}
+			}
+			break;
+		case 'a':
+			fptr++;
+			break;
+		case 'b':
+			fptr++;
+			break;
+		case 'f':
+			fptr++;
+			break;
+		case 'n':
+			fptr++;
+			break;
+		case 'r':
+			fptr++;
+			break;
+		case 't':
+			fptr++;
+			break;
+		case 'v':
+			fptr++;
+			break;
+		default:;
+			if((ccheck = cc_pp_isunicn(fptr - 1, lineno))) {
+				fptr = ccheck;	
+			}
+			else {
+				cc_log_err("UDF - Invalid Escape sequence in string literal.", "");
+				fptr++;
+			}
+			break;
+	}
+	return fptr;
+}
+
 char *cc_pp_schar_seq(char *fptr, unsigned lineno) {
-	char *ccheck; 
 	while(*fptr && *fptr != '"') {
 		if(*fptr == '\\') {
-			switch(*(fptr + 1)) {
-				case '\'':
-					fptr++;
-					break;
-				case '"':
-					fptr++;
-					break;
-				case '?':
-					fptr++;
-					break;
-				case '\\':
-					if(cc_pp_isoct(*(fptr + 1))) {
-						fptr++;
-						if(cc_pp_isoct(*(fptr + 2))) {
-							fptr++;
-							if(cc_pp_isoct(*(fptr + 3))) {
-								fptr++;
-							}
-						}
-					}
-					else if(*(fptr + 1) == 'x') {
-						if(cc_pp_ishex(*++fptr)) {
-							while(cc_pp_ishex(*++fptr));
-						}
-						else {
-							cc_log_err("UDF - \\x not followed by hex digits.", "");
-						}
-					}
-					break;
-				case 'a':
-					fptr++;
-					break;
-				case 'b':
-					fptr++;
-					break;
-				case 'f':
-					fptr++;
-					break;
-				case 'n':
-					fptr++;
-					break;
-				case 'r':
-					fptr++;
-					break;
-				case 't':
-					fptr++;
-					break;
-				case 'v':
-					fptr++;
-					break;
-				default:;
-					if((ccheck = cc_pp_isunicn(fptr - 1, lineno))) {
-						fptr = ccheck;	
-					}
-					else {
-						cc_log_err("UDF - Invalid Escape sequence in string literal.", "");
-						fptr++;
-					}
-					break;
-			}
+			fptr = cc_pp_escape_seq(fptr, lineno);
 		}
 		else {
 			fptr++;
 		}
 	}
-	return NULL;
+	return fptr + 1;
 }
 
+char *cc_pp_cchar_seq(char *fptr, unsigned lineno) {
+	while(*fptr && *fptr != '\'') {
+		if(*fptr == '\\') {
+			fptr = cc_pp_escape_seq(fptr, lineno);	
+		}
+		else {
+			fptr++;
+		}
+	}
+	return fptr + 1;
+}
