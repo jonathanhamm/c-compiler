@@ -22,12 +22,29 @@ static char *cc_pp_escape_seq(char *fptr, unsigned lineno);
 static char *cc_pp_schar_seq(char *fptr, unsigned lineno);
 static char *cc_pp_cchar_seq(char *fptr, unsigned lineno);
 
+static void cc_pp(cc_pp_toklist_s list);
+static void cc_pp_group_part(cc_pp_tok_s **t);
+static void cc_pp_if_section(cc_pp_tok_s **t);
+static void cc_pp_if_group(cc_pp_tok_s **t);
+static void cc_pp_elif_groups(cc_pp_tok_s **t);
+static void cc_pp_elif_group(cc_pp_tok_s **t);
+static void cc_pp_else_groupe(cc_pp_tok_s **t);
+static void cc_pp_endif_line(cc_pp_tok_s **t);
+static void cc_pp_control_line(cc_pp_tok_s **t);
+static void cc_pp_text_line(cc_pp_tok_s **t);
+static void cc_pp_non_directive(cc_pp_tok_s **t);
+static void cc_pp_lparen(cc_pp_tok_s **p);
+static void cc_pp_replacement_list(cc_pp_tok_s **p);
+static void cc_pp_pp_tokens(cc_pp_tok_s **p);
+static void cc_pp_new_line(cc_pp_tok_s **p);
+
 cc_buf_s cc_pp_parse(cc_buf_s src) {
 	cc_buf_s phase12;
 	cc_pp_toklist_s list;
 
 	phase12 = cc_pp_trigraph_lines(src);
 	list = cc_pp_lex(phase12);
+	cc_pp(list);
 	cc_pp_printtok(&list);
 	return phase12;
 }
@@ -802,3 +819,55 @@ char *cc_pp_cchar_seq(char *fptr, unsigned lineno) {
 	}
 	return fptr + 1;
 }
+
+void cc_pp(cc_pp_toklist_s list) {
+	cc_pp_tok_s *t = list.head;
+
+	while(t) {
+		cc_pp_group_part(&t);
+	}
+}
+
+void cc_pp_group_part(cc_pp_tok_s **tt) {
+	
+}
+
+void cc_pp_if_section(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_if_group(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_elif_groups(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_elif_group(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_else_groupe(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_endif_line(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_control_line(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_text_line(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_non_directive(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_lparen(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_replacement_list(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_pp_tokens(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_new_line(cc_pp_tok_s **tt) {
+}
+
