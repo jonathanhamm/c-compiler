@@ -23,20 +23,20 @@ static char *cc_pp_schar_seq(char *fptr, unsigned lineno);
 static char *cc_pp_cchar_seq(char *fptr, unsigned lineno);
 
 static void cc_pp(cc_pp_toklist_s list);
-static void cc_pp_group_part(cc_pp_tok_s **t);
-static void cc_pp_if_section(cc_pp_tok_s **t);
-static void cc_pp_if_group(cc_pp_tok_s **t);
-static void cc_pp_elif_groups(cc_pp_tok_s **t);
-static void cc_pp_elif_group(cc_pp_tok_s **t);
-static void cc_pp_else_groupe(cc_pp_tok_s **t);
-static void cc_pp_endif_line(cc_pp_tok_s **t);
-static void cc_pp_control_line(cc_pp_tok_s **t);
-static void cc_pp_text_line(cc_pp_tok_s **t);
-static void cc_pp_non_directive(cc_pp_tok_s **t);
-static void cc_pp_lparen(cc_pp_tok_s **p);
-static void cc_pp_replacement_list(cc_pp_tok_s **p);
-static void cc_pp_pp_tokens(cc_pp_tok_s **p);
-static void cc_pp_new_line(cc_pp_tok_s **p);
+static bool cc_pp_ws_seq(cc_pp_tok_s **tt);
+static cc_pp_tok_s *cc_pp_if_section(cc_pp_tok_s *t);
+static void cc_pp_if_group(cc_pp_tok_s **tt);
+static void cc_pp_elif_groups(cc_pp_tok_s **tt);
+static void cc_pp_elif_group(cc_pp_tok_s **tt);
+static void cc_pp_else_groupe(cc_pp_tok_s **tt);
+static void cc_pp_endif_line(cc_pp_tok_s **tt);
+static void cc_pp_control_line(cc_pp_tok_s **tt);
+static void cc_pp_text_line(cc_pp_tok_s **tt);
+static void cc_pp_non_directive(cc_pp_tok_s **tt);
+static void cc_pp_lparen(cc_pp_tok_s **tt);
+static void cc_pp_replacement_list(cc_pp_tok_s **tt);
+static void cc_pp_pp_tokens(cc_pp_tok_s **tt);
+static void cc_pp_new_line(cc_pp_tok_s **tt);
 
 cc_buf_s cc_pp_parse(cc_buf_s src) {
 	cc_buf_s phase12;
@@ -821,21 +821,46 @@ char *cc_pp_cchar_seq(char *fptr, unsigned lineno) {
 }
 
 void cc_pp(cc_pp_toklist_s list) {
-	cc_pp_tok_s *t = list.head;
+	cc_pp_tok_s *t = list.head, *check;
 
 	while(t) {
-		cc_pp_group_part(&t);
+		check = cc_pp_if_section(t);
+		if(!check) {
+		}
 	}
 }
 
-void cc_pp_group_part(cc_pp_tok_s **tt) {
-	
+bool cc_pp_ws_seq(cc_pp_tok_s **tt) {
+	bool gotlf = false;
+	cc_pp_tok_s *t = *tt;
+
+	while(t->type == CCPP_TYPE_WS) {
+		if(t->att == CCPP_ATT_NEWLINE) {
+			gotlf = true;
+		}
+	}
+	*tt = t;
+	return gotlf;
 }
 
-void cc_pp_if_section(cc_pp_tok_s **tt) {
+cc_pp_tok_s *cc_pp_if_section(cc_pp_tok_s *t) {
+	if(t->type == CCPP_PUNCTUATOR) {
+		if(t->att == CCPP_ATT_HASH) {
+			if(!strcmp(t->lex, "if")) {
+				
+			}
+			else if(!strcmp(t->lex, "ifdef")) {
+			}
+			else if(!strcmp(t->lex, "ifndef")) {
+			}
+		} 
+	}
+	
+	return NULL;
 }
 
 void cc_pp_if_group(cc_pp_tok_s **tt) {
+		
 }
 
 void cc_pp_elif_groups(cc_pp_tok_s **tt) {

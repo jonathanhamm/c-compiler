@@ -1,4 +1,4 @@
-#ifndef _cc_pp_h_
+q#ifndef _cc_pp_h_
 #define _cc_pp_h_
 
 #include "general.h"
