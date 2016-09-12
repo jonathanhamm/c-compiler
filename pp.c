@@ -147,7 +147,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					fptr++;
 				}
 				while(*fptr == ' ' || *fptr == '\t' || *fptr == '\v');
-				cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
+				cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_NONE);
 				break;
 			case '[':
 				cc_pp_addtok(&list, "[", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
@@ -267,7 +267,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					fptr += 2;
 					while(*fptr != '\n')
 						fptr++;
-					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
+					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_NONE);
 				}
 				else if(*(fptr + 1) == '*') {
 					fptr += 2;
@@ -278,7 +278,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						}
 						fptr++;
 					}
-					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_DEFAULT);
+					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_NONE);
 				}
 				else if(*(fptr + 1) == '=') {
 					cc_pp_addtok(&list, "/=", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGNDIV);
@@ -322,7 +322,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					fptr++;
 					bck = *fptr;
 					*fptr = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_DEFAULT);
+					cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_NONE);
 					*fptr = bck;
 				}
 				else if(*(fptr + 1) == '<') {
@@ -437,7 +437,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_DEFAULT);
+						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -451,7 +451,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_DEFAULT);
+						cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -474,7 +474,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_DEFAULT);
+						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -489,7 +489,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_DEFAULT);
+						cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -508,7 +508,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					fptr = ccheck;
 					bck = *fptr;
 					*fptr = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_DEFAULT);
+					cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_NONE);
 					*fptr = bck;
 				}
 				else {
@@ -548,7 +548,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					fptr++;
 					bck = *fptr;
 					*fptr = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_DEFAULT);
+					cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_NONE);
 					*fptr = bck;
 				}
 				else {
@@ -558,7 +558,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_DEFAULT);
+						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -573,7 +573,7 @@ ccpp_default:
 				if((ccheck = cc_pp_identifier(fptr, lineno))) {
 					bck = *ccheck;
 					*ccheck = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_IDENTIFIER, CCPP_ATT_DEFAULT);
+					cc_pp_addtok(&list, bptr, CCPP_IDENTIFIER, CCPP_ATT_NONE);
 					*ccheck = bck;
 					fptr = ccheck;
 				}
@@ -598,7 +598,7 @@ ccpp_default:
 					}
 					bck = *fptr;
 					*fptr = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_NUMBER, CCPP_ATT_DEFAULT);
+					cc_pp_addtok(&list, bptr, CCPP_NUMBER, CCPP_ATT_NONE);
 					*fptr = bck;
 				}
 				else {

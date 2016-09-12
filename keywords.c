@@ -8,10 +8,11 @@
  *
  */
 
-cc_keyword_e cc_keyword_check(cc_pp_tok_s *tok) {
+cc_pp_tokatt_e cc_keyword_check(cc_pp_tok_s *tok) {
 	char *lex = tok->lex;
 
 	if(!strcmp(lex, "alignof")) {
+		return CCPP_ATT_ALIGNOF;
 	}
 	else if(!strcmp(lex, "auto")) {
 	}
@@ -100,7 +101,7 @@ cc_keyword_e cc_keyword_check(cc_pp_tok_s *tok) {
 	else if(!strcmp(lex, "_Thread_local")) {
 	}
 	else {
-		return CCK_NONE;	
+		return CCPP_ATT_DEFAULT;	
 	}
 }
 

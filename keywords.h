@@ -3,58 +3,8 @@
 
 #include "pp.h"
 
-typedef enum cc_keyword_e cc_keyword_e;
 
-enum cc_keyword_e {
-	CCK_NONE,
-	CCK_ALIGNOF,
-	CCK_AUTO,
-	CCK_BREAK,
-	CCK_CASE,
-	CCK_CHAR,
-	CCK_CONST,
-	CCK_CONTINUE,
-	CCK_DEFAULT,
-	CCK_DO,
-	CCK_DOUBLE,
-	CCK_ELSE,
-	CCK_ENUM,
-	CCK_EXTERN,
-	CCK_FLOAT,
-	CCK_FOR,
-	CCK_GOTO,
-	CCK_IF,
-	CCK_INLINE,
-	CCK_INT,
-	CCK_LONG,
-	CCK_REGISTER,
-	CCK_RESTRICT,
-	CCK_RETURN,
-	CCK_SHORT,
-	CCK_SIGNED,
-	CCK_SIZEOF,
-	CCK_STATIC,
-	CCK_STRUCT,
-	CCK_SWITCH,
-	CCK_TYPEDEF,
-	CCK_UNION,
-	CCK_UNSIGNED,
-	CCK_VOID,
-	CCK_VOLATILE,
-	CCK_WHILE,
-	CCK__ALIGNAS,
-	CCK__ATOMIC,
-	CCK__BOOL,
-	CCK__COMPLEX,
-	CCK__GENERIC,
-	CCK__IMAGINARY,
-	CCK__NORETURN,
-	CCK__STATIC_ASSERT,
-	CCK__THREAD_LOCAL
-
-};
-
-extern cc_keyword_e cc_keyword_check(cc_pp_tok_s *tok);
+extern cc_pp_tokatt_e cc_keyword_check(cc_pp_tok_s *tok);
 
 #endif
 
