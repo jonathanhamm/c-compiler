@@ -1,4 +1,4 @@
-q#ifndef _cc_pp_h_
+#ifndef _cc_pp_h_
 #define _cc_pp_h_
 
 #include "general.h"
@@ -13,11 +13,13 @@ enum cc_pp_toktype_e  {
 	CCPP_TYPE_WS,
 	CCPP_HEADER_NAME,
 	CCPP_IDENTIFIER,
+	CCPP_CONSTANT,
 	CCPP_NUMBER,
 	CCPP_CHARACTER_CONSTANT,
 	CCPP_STRING_LITERAL,
 	CCPP_PUNCTUATOR,
-	CCPP_NON_WS
+	CCPP_NON_WS,
+	CCPP_KEYWORD
 };
 
 enum cc_pp_tokatt_e  {

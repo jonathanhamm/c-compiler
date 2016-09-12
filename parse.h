@@ -3,7 +3,7 @@
 
 #include "pp.h"
 
-extern void ccp_constant_expression(cc_pp_tok_s **t);
+extern void ccp_constant_expression(cc_pp_tok_s **t, bool mode_pp);
 
 #endif
 
