@@ -5,12 +5,27 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#define SYM_TABLE_PRIME 97
+
 typedef struct cc_buf_s cc_buf_s;
+typedef struct cc_sym_rec_s cc_sym_rec_s;
+typedef struct cc_sym_s cc_sym_s;
 
 struct cc_buf_s {
 	size_t bsize;
 	size_t size;
 	void *buf;
+};
+
+struct cc_sym_rec_s {
+	char *key;
+	void *val;
+	cc_sym_rec_s *next;
+};
+
+struct cc_sym_s  {
+	unsigned size;
+	cc_sym_rec_s *table[SYM_TABLE_PRIME];	
 };
 
 extern void cc_buf_init(cc_buf_s *b);
@@ -27,6 +42,11 @@ extern void cc_log(const char *format, ...);
 
 #define cc_log_err(fmt,...)	cc_log("ERROR:\t%u\t" fmt, lineno, __VA_ARGS__)
 
+
+extern int cc_sym_insert(cc_sym_s *map, char *key, void *val);
+extern void *cc_sym_lookup(cc_sym_s *map, char *key);
+extern void cc_sym_delete(cc_sym_s *map, char *key);
+extern void cc_sym_destroy(cc_sym_s *map);
 
 /* 
  * The usual malloc wrappers

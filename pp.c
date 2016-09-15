@@ -876,6 +876,27 @@ void cc_pp_endif_line(cc_pp_tok_s **tt) {
 }
 
 void cc_pp_control_line(cc_pp_tok_s **tt) {
+	cc_pp_tok_s *t = *tt;
+
+	t = t->next;
+
+	if(!strcmp(t->lex, "include")) {
+	}
+	else if(!strcmp(t->lex, "define")) {
+	}
+	else if(!strcmp(t->lex, "undef")) {
+	}
+	else if(!strcmp(t->lex, "line")) {
+	}
+	else if(!strcmp(t->lex, "error")) {
+	}
+	else if(!strcmp(t->lex, "pragma")) {
+	}
+	else if(t->type == CCPP_TYPE_WS && t->att == CCPP_ATT_NEWLINE) {
+	}
+	else {
+		//syntax error: invalid pp directive
+	}
 }
 
 void cc_pp_text_line(cc_pp_tok_s **tt) {

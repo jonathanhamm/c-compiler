@@ -3,11 +3,12 @@
 
 #include "general.h"
 
-typedef struct cc_pp_tok_s cc_pp_tok_s;
-typedef struct cc_pp_toklist_s cc_pp_toklist_s;
 
 typedef enum cc_pp_toktype_e cc_pp_toktype_e; 
 typedef enum cc_pp_tokatt_e cc_pp_tokatt_e;
+
+typedef struct cc_pp_tok_s cc_pp_tok_s;
+typedef struct cc_pp_toklist_s cc_pp_toklist_s;
 
 enum cc_pp_toktype_e  {
 	CCPP_TYPE_WS,

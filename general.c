@@ -1,12 +1,16 @@
 #include "general.h"
 #include <string.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 enum {
 	INIT_BUF_SIZE = 512
 };
 
 static FILE *logfile; 
+
+static cc_sym_rec_s *cc_sym_rec_s_(char *key, void *val);
+static unsigned pjwhash(const char *key);
 
 void cc_buf_init(cc_buf_s *b) {
 	b->size = 0;
@@ -90,6 +94,98 @@ void cc_log(const char *format, ...) {
 	va_start(args, format);
 	vfprintf(logfile, format, args);
 	va_end(args);
+}
+
+
+int cc_sym_insert(cc_sym_s *map, char *key, void *val) {
+	cc_sym_rec_s **prec = &map->table[pjwhash(key)], 
+		     *rec = *prec;
+
+	cc_sym_rec_s *nrec = cc_sym_rec_s_(key, val);
+	
+	if(rec) {
+		do {
+			if(!strcmp(rec->key, key)) {
+				free(nrec);
+				return -1;
+			}
+			else {
+				rec = rec->next;
+			}
+		}
+		while(rec->next);
+		rec->next = nrec;
+	}
+	else {
+		*prec = nrec;
+	}
+}
+
+void *cc_sym_lookup(cc_sym_s *map, char *key) {
+	cc_sym_rec_s *rec = map->table[pjwhash(key)];
+
+	if(!strcmp(rec->key, key)) {
+		return rec->val;
+	}
+	else {
+		do {
+			if(!strcmp(rec->key, key)) {
+				return rec->val;
+			}
+			else {
+				rec = rec->next;
+			}
+		} 
+		while(rec);
+		return NULL;
+	}
+}
+
+void cc_sym_delete(cc_sym_s *map, char *key) {
+	cc_sym_rec_s **prec = &map->table[pjwhash(key)],
+		       *rec = *prec,
+		       *bck = NULL;
+	if(rec) {
+		do {
+			if(!strcmp(rec->key, key)) {
+				if(bck) {
+					bck->next = rec->next;
+				}
+				else {
+					*prec = NULL;
+				}
+				free(rec);
+			}
+			else {
+				bck = rec;
+				rec = rec->next;
+			}
+		}
+		while(rec->next);
+	}
+}
+
+void cc_sym_destroy(cc_sym_s *map) {
+}
+
+cc_sym_rec_s *cc_sym_rec_s_(char *key, void *val) {
+	cc_sym_rec_s *rec = cc_alloc(sizeof *rec);
+	rec->key = key;
+	rec->val= val;
+	rec->next = NULL;
+}
+
+unsigned pjwhash(const char *key) {
+	const char *str = key;
+	unsigned h = 0, g;
+
+	while(*str) {
+		h = (h << 4) + *str++;
+		if((g = h & (unsigned)0xf0000000)) {
+			h = (h ^ (g << 24)) ^ g;
+		}
+	}
+	return h % SYM_TABLE_PRIME;
 }
 
 void *cc_alloc(size_t len) {
