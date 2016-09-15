@@ -166,6 +166,19 @@ void cc_sym_delete(cc_sym_s *map, char *key) {
 }
 
 void cc_sym_destroy(cc_sym_s *map) {
+	int i;
+	cc_sym_rec_s **ptr = &map->table[0];
+
+	for(i = 0; i < SYM_TABLE_PRIME; i++) {
+		if(*ptr) {
+			cc_sym_rec_s *iter = *ptr, *bck = iter;
+			while(bck) {
+				bck = iter->next;
+				free(iter);
+			}
+		}
+		ptr++;
+	}
 }
 
 cc_sym_rec_s *cc_sym_rec_s_(char *key, void *val) {
