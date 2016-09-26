@@ -37,6 +37,7 @@ static void cc_pp_lparen(cc_pp_tok_s **tt);
 static void cc_pp_replacement_list(cc_pp_tok_s **tt);
 static void cc_pp_pp_tokens(cc_pp_tok_s **tt);
 static void cc_pp_new_line(cc_pp_tok_s **tt);
+static void cc_pp_define(cc_pp_tok_s **tt);
 
 cc_buf_s cc_pp_parse(cc_buf_s src) {
 	cc_buf_s phase12;
@@ -881,8 +882,11 @@ void cc_pp_control_line(cc_pp_tok_s **tt) {
 	t = t->next;
 
 	if(!strcmp(t->lex, "include")) {
+
 	}
 	else if(!strcmp(t->lex, "define")) {
+		*tt = t;
+		cc_pp_define(tt);
 	}
 	else if(!strcmp(t->lex, "undef")) {
 	}
@@ -915,5 +919,19 @@ void cc_pp_pp_tokens(cc_pp_tok_s **tt) {
 }
 
 void cc_pp_new_line(cc_pp_tok_s **tt) {
+}
+
+void cc_pp_define(cc_pp_tok_s **tt) {
+	cc_pp_tok_s *t = *tt;
+
+	t = t->next;
+
+	if(t->type == CCPP_IDENTIFIER) {
+		t = t->next;
+
+	}
+	else {
+		//syntax error: Expected identifier after #define directive
+	}
 }
 

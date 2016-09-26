@@ -9,6 +9,7 @@ typedef enum cc_pp_tokatt_e cc_pp_tokatt_e;
 
 typedef struct cc_pp_tok_s cc_pp_tok_s;
 typedef struct cc_pp_toklist_s cc_pp_toklist_s;
+typedef struct cc_pp_context_s cc_pp_context_s;
 
 enum cc_pp_toktype_e  {
 	CCPP_TYPE_WS,
@@ -130,6 +131,9 @@ struct cc_pp_tok_s {
 struct cc_pp_toklist_s {
 	cc_pp_tok_s *head;
 	cc_pp_tok_s *tail;
+};
+
+struct cc_pp_context_s {
 };
 
 extern cc_buf_s cc_pp_parse(cc_buf_s src);
