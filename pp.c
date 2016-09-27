@@ -838,7 +838,7 @@ char *cc_pp_cchar_seq(char *fptr, unsigned lineno) {
 }
 
 void cc_pp_init_context(cc_pp_context_s *context) {
-	cc_sym_init(context->symbols);
+	cc_sym_init(&context->symbols);
 }
 
 void cc_pp(cc_pp_toklist_s list) {
@@ -959,7 +959,6 @@ void cc_pp_new_line(cc_pp_tok_s **tt) {
 void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 	cc_pp_tok_s *t = *tt, *ident;
 	cc_pp_define_s *defdata = cc_allocz(sizeof *defdata);
-	cc_sym_s table;
 
 	t = t->next;
 
@@ -967,14 +966,45 @@ void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 		ident = t;
 		t = t->next;
 		
-		cc_sym_init(&table);
 		if(t->type == CCPP_PUNCTUATOR && t->att == CCPP_ATT_LEFT_PAREN) {
-				
+			t = t->next;
+			defdata->arglist = cc_alloc(sizeof *defdata->arglist);
+			cc_ptr_list_init(defdata->arglist);
+			/* identifier list */
+			for(;;) {
+				if(t->type == CCPP_IDENTIFIER) {
+					cc_ptr_list_append(defdata->arglist, t);
+				}
+				else if(t->type == CCPP_PUNCTUATOR) {
+					if(t->att == CCPP_ATT_VARARG) {
+						if(!(t->next && 
+							t->next->type == CCPP_PUNCTUATOR &&
+							t->next->att == CCPP_ATT_RIGHT_PAREN)) {
+							//syntax error: `...` not followed by `)`
+						}
+						else {
+							cc_ptr_list_append(defdata->arglist, t);
+						}
+					}
+					else if(t->att == CCPP_ATT_RIGHT_PAREN) {
+						break;
+					}
+					else {
+						//syntax error: Unknown Identifier
+						break;
+					}
+				}
+				else {
+					//syntax error: Unknown Identifier
+					break;
+				}
+				t = t->next;
+			}
 		}
 		else {
 			defdata->rep_list = cc_pp_replacement_list(&t);
 		}
-		cc_sym_insert(&table, ident->lex, defdata);
+		cc_sym_insert(&context->symbols, ident->lex, defdata);
 	}
 	else {
 		//syntax error: Expected identifier after #define directive

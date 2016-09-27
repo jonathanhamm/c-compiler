@@ -134,7 +134,7 @@ struct cc_pp_toklist_s {
 };
 
 struct cc_pp_context_s {
-	cc_sym_s *symbols;
+	cc_sym_s symbols;
 };
 
 extern cc_buf_s cc_pp_parse(cc_buf_s src);
