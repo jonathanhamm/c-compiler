@@ -4,6 +4,21 @@
 #include <string.h>
 #include <assert.h>
 
+typedef struct cc_pp_define_s cc_pp_define_s;
+
+/**
+ * Structure for Representation of #define macro:
+ * 	<arglist>:
+ * 		- If <arglist> is not NULL, but has length 0, then there is an empy paramlist, ie:
+ * 			#define example() <replacement_list>
+ * 		- If <arglist> is NULL, then we have a simple replacement identifier macro, ie:
+ * 			#define PI 3.14
+ */ 
+struct cc_pp_define_s {
+	cc_ptr_list_s *arglist;
+	cc_ptr_list_s *rep_list;
+};
+
 static cc_buf_s cc_pp_trigraph_lines(cc_buf_s src);
 static cc_pp_toklist_s cc_pp_lex(cc_buf_s src);
 static bool cc_pp_ishex(char c);
@@ -22,6 +37,7 @@ static char *cc_pp_escape_seq(char *fptr, unsigned lineno);
 static char *cc_pp_schar_seq(char *fptr, unsigned lineno);
 static char *cc_pp_cchar_seq(char *fptr, unsigned lineno);
 
+static void cc_pp_init_context(cc_pp_context_s *context);
 static void cc_pp(cc_pp_toklist_s list);
 static bool cc_pp_ws_seq(cc_pp_tok_s **tt);
 static cc_pp_tok_s *cc_pp_if_section(cc_pp_tok_s *t);
@@ -30,14 +46,14 @@ static void cc_pp_elif_groups(cc_pp_tok_s **tt);
 static void cc_pp_elif_group(cc_pp_tok_s **tt);
 static void cc_pp_else_groupe(cc_pp_tok_s **tt);
 static void cc_pp_endif_line(cc_pp_tok_s **tt);
-static void cc_pp_control_line(cc_pp_tok_s **tt);
+static void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt);
 static void cc_pp_text_line(cc_pp_tok_s **tt);
 static void cc_pp_non_directive(cc_pp_tok_s **tt);
 static void cc_pp_lparen(cc_pp_tok_s **tt);
 static cc_ptr_list_s *cc_pp_replacement_list(cc_pp_tok_s **tt);
 static void cc_pp_pp_tokens(cc_pp_tok_s **tt);
 static void cc_pp_new_line(cc_pp_tok_s **tt);
-static void cc_pp_define(cc_pp_tok_s **tt);
+static void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt);
 
 cc_buf_s cc_pp_parse(cc_buf_s src) {
 	cc_buf_s phase12;
@@ -821,9 +837,15 @@ char *cc_pp_cchar_seq(char *fptr, unsigned lineno) {
 	return fptr + 1;
 }
 
+void cc_pp_init_context(cc_pp_context_s *context) {
+	cc_sym_init(context->symbols);
+}
+
 void cc_pp(cc_pp_toklist_s list) {
 	cc_pp_tok_s *t = list.head, *check;
-
+	cc_pp_context_s context;
+	
+	cc_pp_init_context(&context);
 	while(t) {
 		check = cc_pp_if_section(t);
 		if(!check) {
@@ -876,7 +898,7 @@ void cc_pp_else_groupe(cc_pp_tok_s **tt) {
 void cc_pp_endif_line(cc_pp_tok_s **tt) {
 }
 
-void cc_pp_control_line(cc_pp_tok_s **tt) {
+void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 	cc_pp_tok_s *t = *tt;
 
 	t = t->next;
@@ -886,7 +908,7 @@ void cc_pp_control_line(cc_pp_tok_s **tt) {
 	}
 	else if(!strcmp(t->lex, "define")) {
 		*tt = t;
-		cc_pp_define(tt);
+		cc_pp_define(context, tt);
 	}
 	else if(!strcmp(t->lex, "undef")) {
 	}
@@ -934,10 +956,10 @@ void cc_pp_pp_tokens(cc_pp_tok_s **tt) {
 void cc_pp_new_line(cc_pp_tok_s **tt) {
 }
 
-void cc_pp_define(cc_pp_tok_s **tt) {
+void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 	cc_pp_tok_s *t = *tt, *ident;
+	cc_pp_define_s *defdata = cc_allocz(sizeof *defdata);
 	cc_sym_s table;
-	cc_ptr_list_s *list = NULL;
 
 	t = t->next;
 
@@ -950,13 +972,13 @@ void cc_pp_define(cc_pp_tok_s **tt) {
 				
 		}
 		else {
-			list = cc_pp_replacement_list(&t);
-			cc_sym_insert(&table, t->lex, list);
+			defdata->rep_list = cc_pp_replacement_list(&t);
 		}
-		
+		cc_sym_insert(&table, ident->lex, defdata);
 	}
 	else {
 		//syntax error: Expected identifier after #define directive
 	}
+	*tt = t;
 }
 
