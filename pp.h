@@ -3,6 +3,7 @@
 
 #include "general.h"
 
+#define N_INCLUDE_PATHS 2
 
 typedef enum cc_pp_toktype_e cc_pp_toktype_e; 
 typedef enum cc_pp_tokatt_e cc_pp_tokatt_e;
@@ -136,6 +137,8 @@ struct cc_pp_toklist_s {
 struct cc_pp_context_s {
 	cc_sym_s symbols;
 };
+
+extern const char *CC_INCLUDE_PATHS[N_INCLUDE_PATHS];
 
 extern cc_buf_s cc_pp_parse(cc_buf_s src);
 

@@ -19,6 +19,12 @@ struct cc_pp_define_s {
 	cc_ptr_list_s *rep_list;
 };
 
+
+const char *CC_INCLUDE_PATHS[N_INCLUDE_PATHS] = {
+	"/usr/include",
+	"/usr/bin/include"
+};
+
 static cc_buf_s cc_pp_trigraph_lines(cc_buf_s src);
 static cc_pp_toklist_s cc_pp_lex(cc_buf_s src);
 static bool cc_pp_ishex(char c);
@@ -36,6 +42,8 @@ static bool cc_pp_is_hname(cc_pp_tok_s *tail);
 static char *cc_pp_escape_seq(char *fptr, unsigned lineno);
 static char *cc_pp_schar_seq(char *fptr, unsigned lineno);
 static char *cc_pp_cchar_seq(char *fptr, unsigned lineno);
+
+static cc_buf_s cc_pp_read_header_file(cc_pp_tok_s *t);
 
 static void cc_pp_init_context(cc_pp_context_s *context);
 static void cc_pp(cc_pp_toklist_s list);
@@ -837,6 +845,28 @@ char *cc_pp_cchar_seq(char *fptr, unsigned lineno) {
 	return fptr + 1;
 }
 
+cc_buf_s cc_pp_read_header_file(cc_pp_tok_s *t) {
+	char *path = t->lex;
+	size_t len = strlen(path);
+
+	path[len - 2] = '\0';
+	if(*t->lex == '"') {
+		return cc_read_file(t->lex + 1);
+	}
+	else {
+		int i;
+		cc_buf_s result;
+
+		for(i = 0; i < N_INCLUDE_PATHS; i++) {
+			result = cc_read_file(t->lex + 1);
+			if(result.buf) {
+				return result;
+			}
+		}
+		return result;
+	}
+}
+
 void cc_pp_init_context(cc_pp_context_s *context) {
 	cc_sym_init(&context->symbols);
 }
@@ -904,7 +934,7 @@ void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 	t = t->next;
 
 	if(!strcmp(t->lex, "include")) {
-
+		
 	}
 	else if(!strcmp(t->lex, "define")) {
 		*tt = t;

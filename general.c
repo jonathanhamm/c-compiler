@@ -93,7 +93,6 @@ cc_buf_s cc_read_file(const char *fname) {
 		fclose(f);
 	}
 	else {
-		perror("Error opening file");
 		buf.size = 0;
 		buf.bsize = 0;
 		buf.buf = NULL;
