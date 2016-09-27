@@ -3,9 +3,9 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-enum {
-	INIT_BUF_SIZE = 512
-};
+
+#define INIT_BUF_SIZE 512
+#define INIT_PTR_BUF_SIZE 16
 
 static FILE *logfile; 
 
@@ -58,6 +58,24 @@ void cc_buf_clear(cc_buf_s *buf) {
 
 void cc_buf_destroy(cc_buf_s *b) {
 	free(b->buf);
+}
+
+void cc_ptr_list_init(cc_ptr_list_s *list) {
+	list->bsize = INIT_PTR_BUF_SIZE;
+	list->size = 0 ;
+	list->ptrs = cc_alloc(INIT_PTR_BUF_SIZE * sizeof(*list->ptrs));
+}
+
+void cc_ptr_list_append(cc_ptr_list_s *list, void *ptr) {
+	if(list->bsize == list->size) {
+		list->bsize *= 2;
+		list->ptrs = cc_realloc(list->ptrs, list->bsize);
+	}
+	list->ptrs[list->size++] = ptr;
+}
+
+void cc_ptr_list_destroy(cc_ptr_list_s *list) {
+	free(list->ptrs);
 }
 
 cc_buf_s cc_read_file(const char *fname) {
@@ -115,7 +133,6 @@ void cc_sym_init(cc_sym_s *map) {
 int cc_sym_insert(cc_sym_s *map, char *key, void *val) {
 	cc_sym_rec_s **prec = &map->table[pjwhash(key)], 
 		     *rec = *prec;
-
 	cc_sym_rec_s *nrec = cc_sym_rec_s_(key, val);
 	
 	if(rec) {
@@ -136,6 +153,7 @@ int cc_sym_insert(cc_sym_s *map, char *key, void *val) {
 	else {
 		*prec = nrec;
 	}
+	map->size++;
 	return 0;
 }
 
@@ -183,7 +201,7 @@ void cc_sym_delete(cc_sym_s *map, char *key) {
 	}
 }
 
-void cc_sym_foreach(cc_sym_s *map, void (*f)(cc_sym_rec_s *)) {
+void cc_sym_foreach(cc_sym_s *map, void (*f)(cc_sym_s *, cc_sym_rec_s *)) {
 	int i;
 	cc_sym_rec_s **pt = map->table, *rec;
 
@@ -191,9 +209,10 @@ void cc_sym_foreach(cc_sym_s *map, void (*f)(cc_sym_rec_s *)) {
 		rec = *pt;
 		if(rec) {
 			do {
-				f(rec);
+				f(map, rec);
 				rec = rec->next;
-			} while(rec);
+			} 
+			while(rec);
 		}
 	}
 }

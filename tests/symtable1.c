@@ -2,7 +2,8 @@
 #include <stdio.h>
 
 static void parse_file(FILE *F);
-static void print_rec(cc_sym_rec_s *rec);
+static void print_rec(cc_sym_s *table, cc_sym_rec_s *rec);
+static void delete_test(cc_sym_s *table, cc_sym_rec_s *rec);
 
 int main(int argc, char *argv[]) {	
 	if(argc > 1) {
@@ -22,7 +23,6 @@ int main(int argc, char *argv[]) {
 	else {
 		parse_file(stdin);
 	}
-
 	return 0;
 }
 
@@ -57,7 +57,6 @@ void parse_file(FILE *f) {
 						key = dupstr(keybuf.buf);
 						cc_buf_clear(&keybuf);
 						curr = &valbuf;
-						
 					}
 					wstransition = false;
 				}
@@ -75,7 +74,15 @@ void parse_file(FILE *f) {
 }
 
 
-void print_rec(cc_sym_rec_s *rec) {
+void print_rec(cc_sym_s *table, cc_sym_rec_s *rec) {
 	printf("keyval: %s -> %s\n", rec->key, rec->val);
+}
+
+void delete_test(cc_sym_s *table, cc_sym_rec_s *rec) {
+	int i;
+
+	for(i = 0; i < table->size / 2; i++) {
+		
+	}
 }
 

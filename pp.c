@@ -923,12 +923,21 @@ void cc_pp_new_line(cc_pp_tok_s **tt) {
 
 void cc_pp_define(cc_pp_tok_s **tt) {
 	cc_pp_tok_s *t = *tt;
+	cc_sym_s table;
 
 	t = t->next;
 
 	if(t->type == CCPP_IDENTIFIER) {
 		t = t->next;
+		
+		if(t->type == CCPP_PUNCTUATOR && t->att == CCPP_ATT_LEFT_PAREN) {
 
+		}
+		else {
+		}
+
+		cc_sym_init(&table);
+		
 	}
 	else {
 		//syntax error: Expected identifier after #define directive
