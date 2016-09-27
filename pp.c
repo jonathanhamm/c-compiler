@@ -924,6 +924,7 @@ void cc_pp_new_line(cc_pp_tok_s **tt) {
 void cc_pp_define(cc_pp_tok_s **tt) {
 	cc_pp_tok_s *t = *tt;
 	cc_sym_s table;
+	cc_ptr_list_s *list = NULL;
 
 	t = t->next;
 
@@ -931,11 +932,18 @@ void cc_pp_define(cc_pp_tok_s **tt) {
 		t = t->next;
 		
 		if(t->type == CCPP_PUNCTUATOR && t->att == CCPP_ATT_LEFT_PAREN) {
-
+				
 		}
 		else {
+			while(!(t->type == CCPP_TYPE_WS && t->att == CCPP_ATT_NEWLINE)) {
+				if(!list) {
+					list = cc_alloc(sizeof *list);
+					cc_ptr_list_init(list);
+				}
+				cc_ptr_list_append(list, t);
+				t = t->next;
+			}
 		}
-
 		cc_sym_init(&table);
 		
 	}
