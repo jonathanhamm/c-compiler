@@ -34,7 +34,7 @@ static void cc_pp_control_line(cc_pp_tok_s **tt);
 static void cc_pp_text_line(cc_pp_tok_s **tt);
 static void cc_pp_non_directive(cc_pp_tok_s **tt);
 static void cc_pp_lparen(cc_pp_tok_s **tt);
-static void cc_pp_replacement_list(cc_pp_tok_s **tt);
+static cc_ptr_list_s *cc_pp_replacement_list(cc_pp_tok_s **tt);
 static void cc_pp_pp_tokens(cc_pp_tok_s **tt);
 static void cc_pp_new_line(cc_pp_tok_s **tt);
 static void cc_pp_define(cc_pp_tok_s **tt);
@@ -912,7 +912,20 @@ void cc_pp_non_directive(cc_pp_tok_s **tt) {
 void cc_pp_lparen(cc_pp_tok_s **tt) {
 }
 
-void cc_pp_replacement_list(cc_pp_tok_s **tt) {
+cc_ptr_list_s *cc_pp_replacement_list(cc_pp_tok_s **tt) {
+	cc_pp_tok_s *t = *tt;
+	cc_ptr_list_s *list = NULL;
+	
+	while(!(t->type == CCPP_TYPE_WS && t->att == CCPP_ATT_NEWLINE)) {
+		if(!list) {
+			list = cc_alloc(sizeof *list);
+			cc_ptr_list_init(list);
+		}
+		cc_ptr_list_append(list, t);
+		t = t->next;
+	}
+	*tt = t;
+	return list;
 }
 
 void cc_pp_pp_tokens(cc_pp_tok_s **tt) {
@@ -922,29 +935,24 @@ void cc_pp_new_line(cc_pp_tok_s **tt) {
 }
 
 void cc_pp_define(cc_pp_tok_s **tt) {
-	cc_pp_tok_s *t = *tt;
+	cc_pp_tok_s *t = *tt, *ident;
 	cc_sym_s table;
 	cc_ptr_list_s *list = NULL;
 
 	t = t->next;
 
 	if(t->type == CCPP_IDENTIFIER) {
+		ident = t;
 		t = t->next;
 		
+		cc_sym_init(&table);
 		if(t->type == CCPP_PUNCTUATOR && t->att == CCPP_ATT_LEFT_PAREN) {
 				
 		}
 		else {
-			while(!(t->type == CCPP_TYPE_WS && t->att == CCPP_ATT_NEWLINE)) {
-				if(!list) {
-					list = cc_alloc(sizeof *list);
-					cc_ptr_list_init(list);
-				}
-				cc_ptr_list_append(list, t);
-				t = t->next;
-			}
+			list = cc_pp_replacement_list(&t);
+			cc_sym_insert(&table, t->lex, list);
 		}
-		cc_sym_init(&table);
 		
 	}
 	else {
