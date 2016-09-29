@@ -46,7 +46,7 @@ static char *cc_pp_cchar_seq(char *fptr, unsigned lineno);
 static cc_buf_s cc_pp_read_header_file(cc_pp_tok_s *t);
 
 static void cc_pp_init_context(cc_pp_context_s *context);
-static void cc_pp(cc_pp_toklist_s list);
+static void cc_pp(cc_pp_context_s *context0, cc_pp_toklist_s list);
 static bool cc_pp_ws_seq(cc_pp_tok_s **tt);
 static cc_pp_tok_s *cc_pp_if_section(cc_pp_tok_s *t);
 static void cc_pp_if_group(cc_pp_tok_s **tt);
@@ -63,13 +63,13 @@ static void cc_pp_pp_tokens(cc_pp_tok_s **tt);
 static void cc_pp_new_line(cc_pp_tok_s **tt);
 static void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt);
 
-cc_buf_s cc_pp_parse(cc_buf_s src) {
+cc_buf_s cc_pp_parse(cc_pp_context_s *context0, cc_buf_s src) {
 	cc_buf_s phase12;
 	cc_pp_toklist_s list;
 
 	phase12 = cc_pp_trigraph_lines(src);
 	list = cc_pp_lex(phase12);
-	cc_pp(list);
+	cc_pp(context0, list);
 	cc_pp_printtok(&list);
 	return phase12;
 }
@@ -344,11 +344,12 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						}
 					} 
 					while(*fptr && *fptr != '>');
-					fptr++;
-					bck = *fptr;
-					*fptr = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_NONE);
-					*fptr = bck;
+					if(*fptr) {
+						bck = *fptr;
+						*fptr = '\0';
+						cc_pp_addtok(&list, bptr + 1, CCPP_HEADER_NAME, CCPP_ATT_LIBHEADER);
+						*fptr = bck;
+					}
 				}
 				else if(*(fptr + 1) == '<') {
 					cc_pp_addtok(&list, "<<", CCPP_PUNCTUATOR, CCPP_ATT_LSHIFT);
@@ -570,11 +571,12 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						}
 					}
 					while(*fptr && *fptr != '"');
-					fptr++;
-					bck = *fptr;
-					*fptr = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_HEADER_NAME, CCPP_ATT_NONE);
-					*fptr = bck;
+						if(*fptr) {
+						bck = *fptr;
+						*fptr = '\0';
+						cc_pp_addtok(&list, bptr + 1, CCPP_HEADER_NAME, CCPP_ATT_USERHEADER);
+						*fptr = bck;
+					}
 				}
 				else {
 					bptr = fptr;
@@ -849,16 +851,16 @@ cc_buf_s cc_pp_read_header_file(cc_pp_tok_s *t) {
 	char *path = t->lex;
 	size_t len = strlen(path);
 
-	path[len - 2] = '\0';
-	if(*t->lex == '"') {
-		return cc_read_file(t->lex + 1);
+	path[len - 1] = '\0';
+	if(t->att == CCPP_ATT_LIBHEADER) {
+		return cc_read_file(t->lex);
 	}
 	else {
 		int i;
 		cc_buf_s result;
 
 		for(i = 0; i < N_INCLUDE_PATHS; i++) {
-			result = cc_read_file(t->lex + 1);
+			result = cc_read_file(t->lex);
 			if(result.buf) {
 				return result;
 			}
@@ -871,14 +873,24 @@ void cc_pp_init_context(cc_pp_context_s *context) {
 	cc_sym_init(&context->symbols);
 }
 
-void cc_pp(cc_pp_toklist_s list) {
+void cc_pp(cc_pp_context_s *context0, cc_pp_toklist_s list) {
 	cc_pp_tok_s *t = list.head, *check;
-	cc_pp_context_s context;
-	
-	cc_pp_init_context(&context);
+	cc_pp_context_s *context;
+
+	if(context0) {
+		context = context0;
+	}
+	else {
+		context = cc_alloc(sizeof *context);
+		cc_pp_init_context(context);
+	}
+
 	while(t) {
 		check = cc_pp_if_section(t);
 		if(!check) {
+			if(t->type == CCPP_PUNCTUATOR && t->att == CCPP_ATT_HASH) {
+				cc_pp_control_line(context, &t);
+			}
 		}
 	}
 }
@@ -934,7 +946,15 @@ void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 	t = t->next;
 
 	if(!strcmp(t->lex, "include")) {
+		t = t->next;
 		
+		if(t->type == CCPP_HEADER_NAME) {
+			cc_buf_s src = cc_pp_read_header_file(t);
+			cc_pp_parse(context, src);
+		}
+		else {
+			//syntax error: expected header name
+		}
 	}
 	else if(!strcmp(t->lex, "define")) {
 		*tt = t;

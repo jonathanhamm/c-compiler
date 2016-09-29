@@ -28,6 +28,7 @@ void cc_buf_str_addc(cc_buf_s *b, int c) {
 	bptr[b->size++] = c;
 }
 
+
 void cc_buf_str_addstr(cc_buf_s *b, const char *str, size_t n) {
 	size_t i;
 	size_t size = b->size, 

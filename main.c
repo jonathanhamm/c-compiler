@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
 	
 	init_log(stdout);
 	if(src.bsize) {
-		cc_buf_s results = cc_pp_parse(src);
+		cc_buf_s results = cc_pp_parse(NULL, src);
 		exit(EXIT_SUCCESS);
 	}
 	else {

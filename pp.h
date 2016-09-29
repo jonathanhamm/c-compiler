@@ -27,6 +27,8 @@ enum cc_pp_toktype_e  {
 
 enum cc_pp_tokatt_e  {
 	CCPP_ATT_NONE,
+	CCPP_ATT_LIBHEADER,
+	CCPP_ATT_USERHEADER,
 	CCPP_ATT_NEWLINE,
 	CCPP_ATT_LEFT_BRACKET,
 	CCPP_ATT_RIGHT_BRACKET,
@@ -140,6 +142,6 @@ struct cc_pp_context_s {
 
 extern const char *CC_INCLUDE_PATHS[N_INCLUDE_PATHS];
 
-extern cc_buf_s cc_pp_parse(cc_buf_s src);
+extern cc_buf_s cc_pp_parse(cc_pp_context_s *context0, cc_buf_s src);
 
 #endif
