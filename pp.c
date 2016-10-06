@@ -4,6 +4,8 @@
 #include <string.h>
 #include <assert.h>
 
+#define ISNL(t) (t->type == CCPP_TYPE_WS && t->att == CCPP_ATT_NEWLINE)
+
 typedef struct cc_pp_define_s cc_pp_define_s;
 
 /**
@@ -21,8 +23,8 @@ struct cc_pp_define_s {
 
 
 const char *CC_INCLUDE_PATHS[N_INCLUDE_PATHS] = {
-	"/usr/include",
-	"/usr/bin/include"
+	"/usr/include/",
+	"/usr/bin/include/"
 };
 
 static cc_buf_s cc_pp_trigraph_lines(cc_buf_s src);
@@ -35,7 +37,7 @@ static char *cc_pp_isunicn(char *fptr, unsigned lineno);
 static char *cc_pp_identifier_suffix(char *fptr, unsigned lineno);
 static char *cc_pp_identifier(char *fptr, unsigned lineno);
 
-static void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, cc_pp_toktype_e type, cc_pp_tokatt_e att);
+static void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, unsigned lineno, cc_pp_toktype_e type, cc_pp_tokatt_e att);
 static void cc_pp_printtok(cc_pp_toklist_s *list);
 
 static bool cc_pp_is_hname(cc_pp_tok_s *tail);
@@ -62,6 +64,7 @@ static cc_ptr_list_s *cc_pp_replacement_list(cc_pp_tok_s **tt);
 static void cc_pp_pp_tokens(cc_pp_tok_s **tt);
 static void cc_pp_new_line(cc_pp_tok_s **tt);
 static void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt);
+static void cc_pp_eatws(cc_pp_tok_s **tt);
 
 cc_buf_s cc_pp_parse(cc_pp_context_s *context0, cc_buf_s src) {
 	cc_buf_s phase12;
@@ -70,7 +73,7 @@ cc_buf_s cc_pp_parse(cc_pp_context_s *context0, cc_buf_s src) {
 	phase12 = cc_pp_trigraph_lines(src);
 	list = cc_pp_lex(phase12);
 	cc_pp(context0, list);
-	cc_pp_printtok(&list);
+	//cc_pp_printtok(&list);
 	return phase12;
 }
 
@@ -135,8 +138,10 @@ cc_buf_s cc_pp_trigraph_lines(cc_buf_s src) {
 			if(*ptr == '\\' && *(ptr + 1) == '\n') {
 				ptr += 2;	
 			}
-			cc_buf_str_addc(&result, *ptr);
-			ptr++;
+			else {
+				cc_buf_str_addc(&result, *ptr);
+				ptr++;
+			}
 		}
 	}
 	//standard requires this, throw error if test passes?
@@ -161,8 +166,9 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 	while(*fptr) {
 		switch(*fptr) {
 			case '\n':
+				printf("incrementing lineno to %u\n", lineno + 1);
 				lineno++;
-				cc_pp_addtok(&list, "lf", CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
+				cc_pp_addtok(&list, "lf", lineno, CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
 				fptr++;
 				break;
 			case ' ':
@@ -172,145 +178,152 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					fptr++;
 				}
 				while(*fptr == ' ' || *fptr == '\t' || *fptr == '\v');
-				cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_NONE);
+				cc_pp_addtok(&list, " ", lineno, CCPP_TYPE_WS, CCPP_ATT_NONE);
 				break;
 			case '[':
-				cc_pp_addtok(&list, "[", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+				cc_pp_addtok(&list, "[", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
 				fptr++;
 				break;
 			case ']':	
-				cc_pp_addtok(&list, "]", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACKET);
+				cc_pp_addtok(&list, "]", lineno, CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACKET);
 				fptr++;
 				break;
 			case '(':
-				cc_pp_addtok(&list, "(", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_PAREN);
+				cc_pp_addtok(&list, "(", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LEFT_PAREN);
 				fptr++;
 				break;
 			case ')':
-				cc_pp_addtok(&list, ")", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_PAREN);
+				cc_pp_addtok(&list, ")", lineno, CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_PAREN);
 				fptr++;
 				break;
 			case '{':
-				cc_pp_addtok(&list, "{", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACE);
+				cc_pp_addtok(&list, "{", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACE);
 				fptr++;
 				break;
 			case '}':
-				cc_pp_addtok(&list, "}", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACE);
+				cc_pp_addtok(&list, "}", lineno, CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACE);
 				fptr++;
 				break;
 			case '.':
 				if(*(fptr + 1) == '.' && *(fptr + 2) == '.') {
-					cc_pp_addtok(&list, "...", CCPP_PUNCTUATOR, CCPP_ATT_VARARG);
+					cc_pp_addtok(&list, "...", lineno, CCPP_PUNCTUATOR, CCPP_ATT_VARARG);
 					fptr += 3;
 				}
 				else {
-					cc_pp_addtok(&list, ".", CCPP_PUNCTUATOR, CCPP_ATT_DOT);
+					cc_pp_addtok(&list, ".", lineno, CCPP_PUNCTUATOR, CCPP_ATT_DOT);
 					fptr++;
 				}
 				break;
 			case '-':
 				if(*(fptr + 1) == '>') {
-					cc_pp_addtok(&list, "->", CCPP_PUNCTUATOR, CCPP_ATT_ARROW);
+					cc_pp_addtok(&list, "->", lineno, CCPP_PUNCTUATOR, CCPP_ATT_ARROW);
 					fptr += 2;
 				}
 				else if(*(fptr + 1) == '-') {
-					cc_pp_addtok(&list, "--", CCPP_PUNCTUATOR, CCPP_ATT_AUTODEC);
+					cc_pp_addtok(&list, "--", lineno, CCPP_PUNCTUATOR, CCPP_ATT_AUTODEC);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, "-", CCPP_PUNCTUATOR, CCPP_ATT_MINUS);
+					cc_pp_addtok(&list, "-", lineno, CCPP_PUNCTUATOR, CCPP_ATT_MINUS);
 					fptr++;
 				}
 				break;
 			case '*':
 				if(*(fptr + 1) == '=') {
-					cc_pp_addtok(&list, "*=", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGNMULT);
+					cc_pp_addtok(&list, "*=", lineno, CCPP_PUNCTUATOR, CCPP_ATT_ASSIGNMULT);
 					fptr+=2;
 				}
 				else {
-					cc_pp_addtok(&list, "*", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+					cc_pp_addtok(&list, "*", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
 					fptr++;
 				}
 				break;
 			case '+':
 				if(*(fptr + 1) == '+') {
-					cc_pp_addtok(&list, "++", CCPP_PUNCTUATOR, CCPP_ATT_AUTOINC);
+					cc_pp_addtok(&list, "++", lineno, CCPP_PUNCTUATOR, CCPP_ATT_AUTOINC);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, "+", CCPP_PUNCTUATOR, CCPP_ATT_PLUS);
+					cc_pp_addtok(&list, "+", lineno, CCPP_PUNCTUATOR, CCPP_ATT_PLUS);
 					fptr++;
 				}
 				break;
 			case '&':
 				if(*(fptr + 1) == '&') {
-					cc_pp_addtok(&list, "&", CCPP_PUNCTUATOR, CCPP_ATT_LOGAND);
+					cc_pp_addtok(&list, "&&", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LOGAND);
+					fptr += 2;
 				}
 				else if(*(fptr + 1) == '=') {
+					cc_pp_addtok(&list, "&=", lineno, CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN_BITAND);
+					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, "&", CCPP_PUNCTUATOR, CCPP_ATT_AMP);
+					cc_pp_addtok(&list, "&", lineno, CCPP_PUNCTUATOR, CCPP_ATT_AMP);
 					fptr++;
 				}
 				break;
 			case '~':
-				cc_pp_addtok(&list, "~", CCPP_PUNCTUATOR, CCPP_ATT_BITNOT);
+				cc_pp_addtok(&list, "~", lineno, CCPP_PUNCTUATOR, CCPP_ATT_BITNOT);
 				fptr++;
 				break;
 			case '!':
 				if(*(fptr + 1) == '=') {
-					cc_pp_addtok(&list, "!=", CCPP_PUNCTUATOR, CCPP_ATT_NEQ);
+					cc_pp_addtok(&list, "!=", lineno, CCPP_PUNCTUATOR, CCPP_ATT_NEQ);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, "!", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+					cc_pp_addtok(&list, "!", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
 					fptr++;
 				}
 				break;
 			case '%':
 				if(*(fptr + 1) == '>') {
-					cc_pp_addtok(&list, "}", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACE);
+					cc_pp_addtok(&list, "}", lineno, CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACE);
 					fptr += 2;
 				}
 				else if(*(fptr + 1) == ':') {
 					if(*(fptr + 2) == '%' && *(fptr + 3) == ':') {
-						cc_pp_addtok(&list, "##", CCPP_PUNCTUATOR, CCPP_ATT_2HASH);
+						cc_pp_addtok(&list, "##", lineno, CCPP_PUNCTUATOR, CCPP_ATT_2HASH);
 						fptr += 4;
 					}
 					else {
-						cc_pp_addtok(&list, "#", CCPP_PUNCTUATOR, CCPP_ATT_HASH);
+						cc_pp_addtok(&list, "#", lineno, CCPP_PUNCTUATOR, CCPP_ATT_HASH);
 						fptr += 2;
 					}
 				}
 				else {
-					cc_pp_addtok(&list, "%", CCPP_PUNCTUATOR, CCPP_ATT_MOD);
+					cc_pp_addtok(&list, "%", lineno, CCPP_PUNCTUATOR, CCPP_ATT_MOD);
 					fptr++;
 				}	
 				break;
 			case '/':
 				if(*(fptr + 1) == '/') {
 					fptr += 2;
-					while(*fptr != '\n')
+					while(*fptr && *fptr != '\n')
 						fptr++;
-					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_NONE);
+					cc_pp_addtok(&list, " ", lineno, CCPP_TYPE_WS, CCPP_ATT_NONE);
 				}
 				else if(*(fptr + 1) == '*') {
 					fptr += 2;
 					while(*fptr && !(*fptr == '*' && *(fptr + 1) == '/')) {
 						if(*fptr == '\n') {
+							printf("-incrementing lineno to %u\n", lineno + 1);
 							lineno++;
-							cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
+							cc_pp_addtok(&list, " ", lineno, CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
 						}
 						fptr++;
 					}
-					cc_pp_addtok(&list, " ", CCPP_TYPE_WS, CCPP_ATT_NONE);
+					if(*fptr) {
+						cc_pp_addtok(&list, " ", lineno, CCPP_TYPE_WS, CCPP_ATT_NONE);
+						fptr += 2;
+					}
 				}
 				else if(*(fptr + 1) == '=') {
-					cc_pp_addtok(&list, "/=", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGNDIV);
+					cc_pp_addtok(&list, "/=", lineno, CCPP_PUNCTUATOR, CCPP_ATT_ASSIGNDIV);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, "/", CCPP_PUNCTUATOR, CCPP_ATT_DIV);
+					cc_pp_addtok(&list, "/", lineno, CCPP_PUNCTUATOR, CCPP_ATT_DIV);
 					fptr++;
 				}
 				break;
@@ -345,110 +358,111 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					} 
 					while(*fptr && *fptr != '>');
 					if(*fptr) {
-						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr + 1, CCPP_HEADER_NAME, CCPP_ATT_LIBHEADER);
+						cc_pp_addtok(&list, bptr + 1, lineno, CCPP_HEADER_NAME, CCPP_ATT_LIBHEADER);
 						*fptr = bck;
+						*fptr = '>';
+						fptr++;
 					}
 				}
 				else if(*(fptr + 1) == '<') {
-					cc_pp_addtok(&list, "<<", CCPP_PUNCTUATOR, CCPP_ATT_LSHIFT);
+					cc_pp_addtok(&list, "<<", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LSHIFT);
 					fptr += 2;
 				}
 				else if(*(fptr + 1) == '=') {
-					cc_pp_addtok(&list, "<=", CCPP_PUNCTUATOR, CCPP_ATT_LEQ);
+					cc_pp_addtok(&list, "<=", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LEQ);
 					fptr += 2;
 				}
 				else if(*(fptr + 1) == ':') {
-					cc_pp_addtok(&list, "[", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
+					cc_pp_addtok(&list, "[", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACKET);
 					fptr += 2;
 				}
 				else if(*(fptr + 1) == '%') {
-					cc_pp_addtok(&list, "{", CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACE);
+					cc_pp_addtok(&list, "{", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LEFT_BRACE);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, "<", CCPP_PUNCTUATOR, CCPP_ATT_LE);
+					cc_pp_addtok(&list, "<", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LE);
 					fptr++;
 				}
 				break;
 			case '>':
 				if(*(fptr + 1) == '>') {
-					cc_pp_addtok(&list, ">>", CCPP_PUNCTUATOR, CCPP_ATT_RSHIFT);
+					cc_pp_addtok(&list, ">>", lineno, CCPP_PUNCTUATOR, CCPP_ATT_RSHIFT);
 					fptr += 2;
 				}
 				else if(*(fptr + 1) == '=') {
-					cc_pp_addtok(&list, ">=", CCPP_PUNCTUATOR, CCPP_ATT_GE);
+					cc_pp_addtok(&list, ">=", lineno, CCPP_PUNCTUATOR, CCPP_ATT_GE);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, ">", CCPP_PUNCTUATOR, CCPP_ATT_GE);
+					cc_pp_addtok(&list, ">", lineno, CCPP_PUNCTUATOR, CCPP_ATT_GE);
 					fptr++;
 				}
 				break;
 			case '=':
 				if(*(fptr + 1) == '=') {
-					cc_pp_addtok(&list, "==", CCPP_PUNCTUATOR, CCPP_ATT_EQ);
+					cc_pp_addtok(&list, "==", lineno, CCPP_PUNCTUATOR, CCPP_ATT_EQ);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, ">", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN);
+					cc_pp_addtok(&list, ">", lineno, CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN);
 					fptr++;
 				}
 				break;
 			case '^':
 				if(*(fptr + 1) == '=') {
-					cc_pp_addtok(&list, "^=", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN_XOR);
+					cc_pp_addtok(&list, "^=", lineno, CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN_XOR);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, "^", CCPP_PUNCTUATOR, CCPP_ATT_XOR);
+					cc_pp_addtok(&list, "^", lineno, CCPP_PUNCTUATOR, CCPP_ATT_XOR);
 					fptr++;
 				}
 				break;
 			case '|':
 				if(*(fptr + 1) == '|') {
-					cc_pp_addtok(&list, "||", CCPP_PUNCTUATOR, CCPP_ATT_LOGOR);
+					cc_pp_addtok(&list, "||", lineno, CCPP_PUNCTUATOR, CCPP_ATT_LOGOR);
 					fptr += 2;
 				}
 				else if(*(fptr + 1) == '=') {
-					cc_pp_addtok(&list, "|=", CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN_BITOR);
+					cc_pp_addtok(&list, "|=", lineno, CCPP_PUNCTUATOR, CCPP_ATT_ASSIGN_BITOR);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, "|", CCPP_PUNCTUATOR, CCPP_ATT_BITOR);
+					cc_pp_addtok(&list, "|", lineno, CCPP_PUNCTUATOR, CCPP_ATT_BITOR);
 					fptr++;
 				}
 				break;
 			case '?':
-				cc_pp_addtok(&list, "?", CCPP_PUNCTUATOR, CCPP_ATT_TERNARY);
+				cc_pp_addtok(&list, "?", lineno, CCPP_PUNCTUATOR, CCPP_ATT_TERNARY);
 				fptr++;
 				break;
 			case ':':
 				if(*(fptr + 1) == '>') {
-					cc_pp_addtok(&list, "]", CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACKET);
+					cc_pp_addtok(&list, "]", lineno, CCPP_PUNCTUATOR, CCPP_ATT_RIGHT_BRACKET);
 					fptr += 2;
 				}
 				else {
-					cc_pp_addtok(&list, ":", CCPP_PUNCTUATOR, CCPP_ATT_COLON);
+					cc_pp_addtok(&list, ":", lineno, CCPP_PUNCTUATOR, CCPP_ATT_COLON);
 					fptr++;
 				}
 				break;
 			case ';':
-				cc_pp_addtok(&list, ";", CCPP_PUNCTUATOR, CCPP_ATT_SEMICOLON);
+				cc_pp_addtok(&list, ";", lineno, CCPP_PUNCTUATOR, CCPP_ATT_SEMICOLON);
 				fptr++;
 				break;
 			case ',':
-				cc_pp_addtok(&list, ",", CCPP_PUNCTUATOR, CCPP_ATT_COMMA);
+				cc_pp_addtok(&list, ",", lineno, CCPP_PUNCTUATOR, CCPP_ATT_COMMA);
 				fptr++;
 				break;
 			case '#':
 				if(*(fptr + 1) == '#') {
-					cc_pp_addtok(&list, "##", CCPP_PUNCTUATOR, CCPP_ATT_2HASH);
+					cc_pp_addtok(&list, "##", lineno, CCPP_PUNCTUATOR, CCPP_ATT_2HASH);
 					fptr +=2;
 				}
 				else {
-					cc_pp_addtok(&list, "#", CCPP_PUNCTUATOR, CCPP_ATT_HASH);
+					cc_pp_addtok(&list, "#", lineno, CCPP_PUNCTUATOR, CCPP_ATT_HASH);
 					fptr++;
 				}
 				break;
@@ -463,7 +477,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_NONE);
+						cc_pp_addtok(&list, bptr, lineno, CCPP_STRING_LITERAL, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -477,7 +491,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_NONE);
+						cc_pp_addtok(&list, bptr, lineno, CCPP_CHARACTER_CONSTANT, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -500,7 +514,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_NONE);
+						cc_pp_addtok(&list, bptr, lineno, CCPP_STRING_LITERAL, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -515,7 +529,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_NONE);
+						cc_pp_addtok(&list, bptr, lineno, CCPP_CHARACTER_CONSTANT, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -534,7 +548,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					fptr = ccheck;
 					bck = *fptr;
 					*fptr = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_CHARACTER_CONSTANT, CCPP_ATT_NONE);
+					cc_pp_addtok(&list, bptr, lineno, CCPP_CHARACTER_CONSTANT, CCPP_ATT_NONE);
 					*fptr = bck;
 				}
 				else {
@@ -574,7 +588,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						if(*fptr) {
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr + 1, CCPP_HEADER_NAME, CCPP_ATT_USERHEADER);
+						cc_pp_addtok(&list, bptr + 1, lineno, CCPP_HEADER_NAME, CCPP_ATT_USERHEADER);
 						*fptr = bck;
 					}
 				}
@@ -585,7 +599,7 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 						fptr = ccheck;
 						bck = *fptr;
 						*fptr = '\0';
-						cc_pp_addtok(&list, bptr, CCPP_STRING_LITERAL, CCPP_ATT_NONE);
+						cc_pp_addtok(&list, bptr, lineno, CCPP_STRING_LITERAL, CCPP_ATT_NONE);
 						*fptr = bck;
 					}
 					else {
@@ -600,7 +614,7 @@ ccpp_default:
 				if((ccheck = cc_pp_identifier(fptr, lineno))) {
 					bck = *ccheck;
 					*ccheck = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_IDENTIFIER, CCPP_ATT_NONE);
+					cc_pp_addtok(&list, bptr, lineno, CCPP_IDENTIFIER, CCPP_ATT_NONE);
 					*ccheck = bck;
 					fptr = ccheck;
 				}
@@ -625,7 +639,7 @@ ccpp_default:
 					}
 					bck = *fptr;
 					*fptr = '\0';
-					cc_pp_addtok(&list, bptr, CCPP_NUMBER, CCPP_ATT_NONE);
+					cc_pp_addtok(&list, bptr, lineno, CCPP_NUMBER, CCPP_ATT_NONE);
 					*fptr = bck;
 				}
 				else {
@@ -634,6 +648,7 @@ ccpp_default:
 				break;
 		}
 	}
+	cc_pp_addtok(&list, "EOF", lineno, CCPP_EOF, CCPP_ATT_NONE);
 	return list;
 }
 
@@ -702,13 +717,16 @@ char *cc_pp_identifier(char *fptr, unsigned lineno) {
 	return r;
 }
 
-void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, cc_pp_toktype_e type, cc_pp_tokatt_e att) {
+void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, unsigned lineno, cc_pp_toktype_e type, cc_pp_tokatt_e att) {
 	cc_pp_tok_s *t = cc_alloc(sizeof *t);
 
 	t->lex = dupstr(lexeme);
+	t->lineno = lineno;
 	t->type = type;
 	t->att = att;
 	t->next = NULL;
+	
+	printf("tok: %s\n", t->lex);
 
 	if(list->head) {
 		t->prev = list->tail;
@@ -745,7 +763,7 @@ bool cc_pp_is_hname(cc_pp_tok_s *tail) {
 				tail = tail->prev;
 				if(tail->type == CCPP_PUNCTUATOR && tail->att == CCPP_ATT_HASH) {
 					tail = tail->prev;
-					while(tail && (tail->type == CCPP_TYPE_WS && tail->type != CCPP_ATT_NEWLINE)) {
+					while(tail && (tail->type == CCPP_TYPE_WS && tail->att != CCPP_ATT_NEWLINE)) {
 						tail = tail->prev;
 					}
 					if(!tail || tail->type == CCPP_TYPE_WS) {
@@ -849,28 +867,41 @@ char *cc_pp_cchar_seq(char *fptr, unsigned lineno) {
 
 cc_buf_s cc_pp_read_header_file(cc_pp_tok_s *t) {
 	char *path = t->lex;
-	size_t len = strlen(path);
+	size_t pathlen = strlen(path);
+	cc_buf_s result;
 
-	path[len - 1] = '\0';
-	if(t->att == CCPP_ATT_LIBHEADER) {
-		return cc_read_file(t->lex);
+	if(t->att == CCPP_ATT_USERHEADER) {
+		result = cc_read_file(path);
+		if(!result.buf) {
+			printf("Error Reading file ./%s\n", path);
+		}
+		return result;
 	}
 	else {
 		int i;
-		cc_buf_s result;
+		size_t namesize;
+		const char *currbase;
+		char *namebuf;
 
 		for(i = 0; i < N_INCLUDE_PATHS; i++) {
-			result = cc_read_file(t->lex);
+			currbase = CC_INCLUDE_PATHS[i];
+			namesize = pathlen + strlen(currbase) + 1;
+			namebuf = cc_alloc(namesize);
+			sprintf(namebuf, "%s%s", currbase, path);
+			result = cc_read_file(namebuf);
+			free(namebuf);
 			if(result.buf) {
 				return result;
 			}
 		}
+		printf("Error: Failed to locate library file: %s\n", path);
 		return result;
 	}
 }
 
 void cc_pp_init_context(cc_pp_context_s *context) {
 	cc_sym_init(&context->symbols);
+	context->currheader = "root";
 }
 
 void cc_pp(cc_pp_context_s *context0, cc_pp_toklist_s list) {
@@ -892,6 +923,11 @@ void cc_pp(cc_pp_context_s *context0, cc_pp_toklist_s list) {
 				cc_pp_control_line(context, &t);
 			}
 		}
+		t = t->next;
+	}
+	if(!context0) {
+		cc_sym_destroy(&context->symbols);
+		free(context);
 	}
 }
 
@@ -948,9 +984,25 @@ void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 	if(!strcmp(t->lex, "include")) {
 		t = t->next;
 		
+		cc_pp_eatws(&t);
+	
 		if(t->type == CCPP_HEADER_NAME) {
-			cc_buf_s src = cc_pp_read_header_file(t);
-			cc_pp_parse(context, src);
+			cc_pp_tok_s *h = t;
+			t = t->next;
+			cc_pp_eatws(&t);
+			if(ISNL(t)) {	
+				cc_buf_s src = cc_pp_read_header_file(h);
+				if(src.buf) {
+					char *lastfile = context->currheader;
+					context->currheader = h->lex;
+					cc_pp_parse(context, src);
+					printf("setting context to %s\n", lastfile);
+					context->currheader = lastfile;
+				}
+			}
+			else {
+				printf("token: %s\n", t->lex);
+			}
 		}
 		else {
 			//syntax error: expected header name
@@ -968,7 +1020,7 @@ void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 	}
 	else if(!strcmp(t->lex, "pragma")) {
 	}
-	else if(t->type == CCPP_TYPE_WS && t->att == CCPP_ATT_NEWLINE) {
+	else if(ISNL(t)) {
 	}
 	else {
 		//syntax error: invalid pp directive
@@ -988,7 +1040,7 @@ cc_ptr_list_s *cc_pp_replacement_list(cc_pp_tok_s **tt) {
 	cc_pp_tok_s *t = *tt;
 	cc_ptr_list_s *list = NULL;
 	
-	while(!(t->type == CCPP_TYPE_WS && t->att == CCPP_ATT_NEWLINE)) {
+	while(!(ISNL(t))) {
 		if(!list) {
 			list = cc_alloc(sizeof *list);
 			cc_ptr_list_init(list);
@@ -1058,6 +1110,21 @@ void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 	}
 	else {
 		//syntax error: Expected identifier after #define directive
+	}
+	*tt = t;
+}
+
+void cc_pp_eatws(cc_pp_tok_s **tt) {
+	cc_pp_tok_s *t = *tt;
+
+	while(true) {
+		if(t->type != CCPP_TYPE_WS ||
+			(t->att == CCPP_ATT_NEWLINE)) {
+			break;
+		}
+		else {
+			t = t->next;
+		}
 	}
 	*tt = t;
 }

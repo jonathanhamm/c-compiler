@@ -22,7 +22,8 @@ enum cc_pp_toktype_e  {
 	CCPP_STRING_LITERAL,
 	CCPP_PUNCTUATOR,
 	CCPP_NON_WS,
-	CCPP_KEYWORD
+	CCPP_KEYWORD,
+	CCPP_EOF
 };
 
 enum cc_pp_tokatt_e  {
@@ -128,6 +129,7 @@ struct cc_pp_tok_s {
 	cc_pp_toktype_e type;
 	cc_pp_tokatt_e att;
 	char *lex;
+	unsigned lineno;
 	cc_pp_tok_s *next, *prev;
 };
 
@@ -138,6 +140,7 @@ struct cc_pp_toklist_s {
 
 struct cc_pp_context_s {
 	cc_sym_s symbols;
+	char *currheader;
 };
 
 extern const char *CC_INCLUDE_PATHS[N_INCLUDE_PATHS];
