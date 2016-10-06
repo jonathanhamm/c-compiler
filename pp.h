@@ -5,14 +5,14 @@
 
 #define N_INCLUDE_PATHS 2
 
-typedef enum cc_pp_toktype_e cc_pp_toktype_e; 
-typedef enum cc_pp_tokatt_e cc_pp_tokatt_e;
+typedef enum cc_toktype_e cc_toktype_e; 
+typedef enum cc_tokatt_e cc_tokatt_e;
 
-typedef struct cc_pp_tok_s cc_pp_tok_s;
-typedef struct cc_pp_toklist_s cc_pp_toklist_s;
+typedef struct cc_tok_s cc_tok_s;
+typedef struct cc_toklist_s cc_toklist_s;
 typedef struct cc_pp_context_s cc_pp_context_s;
 
-enum cc_pp_toktype_e  {
+enum cc_toktype_e  {
 	CCPP_TYPE_WS,
 	CCPP_HEADER_NAME,
 	CCPP_IDENTIFIER,
@@ -26,7 +26,7 @@ enum cc_pp_toktype_e  {
 	CCPP_EOF
 };
 
-enum cc_pp_tokatt_e  {
+enum cc_tokatt_e  {
 	CCPP_ATT_NONE,
 	CCPP_ATT_LIBHEADER,
 	CCPP_ATT_USERHEADER,
@@ -122,20 +122,20 @@ enum cc_pp_tokatt_e  {
 	CCPP_ATT__IMAGINARY,
 	CCPP_ATT__NORETURN,
 	CCPP_ATT__STATIC_ASSERT,
-	CCPP_ATT__THREAD_LOCAL
+	CCPP_ATT__THREAD_LOCAL,
 };
 
-struct cc_pp_tok_s {
-	cc_pp_toktype_e type;
-	cc_pp_tokatt_e att;
+struct cc_tok_s {
+	cc_toktype_e type;
+	cc_tokatt_e att;
 	char *lex;
 	unsigned lineno;
-	cc_pp_tok_s *next, *prev;
+	cc_tok_s *next, *prev;
 };
 
-struct cc_pp_toklist_s {
-	cc_pp_tok_s *head;
-	cc_pp_tok_s *tail;
+struct cc_toklist_s {
+	cc_tok_s *head;
+	cc_tok_s *tail;
 };
 
 struct cc_pp_context_s {
@@ -144,6 +144,8 @@ struct cc_pp_context_s {
 };
 
 extern const char *CC_INCLUDE_PATHS[N_INCLUDE_PATHS];
+
+extern void cc_pp_addtok(cc_toklist_s *list, char *lexeme, unsigned lineno, cc_toktype_e type, cc_tokatt_e att);
 
 extern cc_buf_s cc_pp_parse(cc_pp_context_s *context0, cc_buf_s src);
 

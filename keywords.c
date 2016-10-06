@@ -9,7 +9,7 @@
  *
  */
 
-cc_pp_tokatt_e cc_keyword_check(cc_pp_tok_s *tok) {
+cc_tokatt_e cc_keyword_check(cc_tok_s *tok) {
 	char *lex = tok->lex;
 
 	if(!strcmp(lex, "alignof")) {
@@ -144,7 +144,7 @@ cc_pp_tokatt_e cc_keyword_check(cc_pp_tok_s *tok) {
 	else if(!strcmp(lex, "_Thread_local")) {
 		return CCPP_ATT__THREAD_LOCAL; }
 	else {
-		return CCPP_ATT_DEFAULT;	
+		return CCPP_ATT_NONE;	
 	}
 }
 

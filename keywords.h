@@ -4,7 +4,7 @@
 #include "pp.h"
 
 
-extern cc_pp_tokatt_e cc_keyword_check(cc_pp_tok_s *tok);
+extern cc_tokatt_e cc_keyword_check(cc_tok_s *tok);
 
 #endif
 

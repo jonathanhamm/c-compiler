@@ -28,7 +28,7 @@ const char *CC_INCLUDE_PATHS[N_INCLUDE_PATHS] = {
 };
 
 static cc_buf_s cc_pp_trigraph_lines(cc_buf_s src);
-static cc_pp_toklist_s cc_pp_lex(cc_buf_s src);
+static cc_toklist_s cc_pp_lex(cc_buf_s src);
 static bool cc_pp_ishex(char c);
 static bool cc_pp_isoct(char c);
 static bool cc_pp_ishexquad(char *fptr);
@@ -37,38 +37,37 @@ static char *cc_pp_isunicn(char *fptr, unsigned lineno);
 static char *cc_pp_identifier_suffix(char *fptr, unsigned lineno);
 static char *cc_pp_identifier(char *fptr, unsigned lineno);
 
-static void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, unsigned lineno, cc_pp_toktype_e type, cc_pp_tokatt_e att);
-static void cc_pp_printtok(cc_pp_toklist_s *list);
+static void cc_pp_printtok(cc_toklist_s *list);
 
-static bool cc_pp_is_hname(cc_pp_tok_s *tail);
+static bool cc_pp_is_hname(cc_tok_s *tail);
 static char *cc_pp_escape_seq(char *fptr, unsigned lineno);
 static char *cc_pp_schar_seq(char *fptr, unsigned lineno);
 static char *cc_pp_cchar_seq(char *fptr, unsigned lineno);
 
-static cc_buf_s cc_pp_read_header_file(cc_pp_tok_s *t);
+static cc_buf_s cc_pp_read_header_file(cc_tok_s *t);
 
 static void cc_pp_init_context(cc_pp_context_s *context);
-static void cc_pp(cc_pp_context_s *context0, cc_pp_toklist_s list);
-static bool cc_pp_ws_seq(cc_pp_tok_s **tt);
-static cc_pp_tok_s *cc_pp_if_section(cc_pp_tok_s *t);
-static void cc_pp_if_group(cc_pp_tok_s **tt);
-static void cc_pp_elif_groups(cc_pp_tok_s **tt);
-static void cc_pp_elif_group(cc_pp_tok_s **tt);
-static void cc_pp_else_groupe(cc_pp_tok_s **tt);
-static void cc_pp_endif_line(cc_pp_tok_s **tt);
-static void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt);
-static void cc_pp_text_line(cc_pp_tok_s **tt);
-static void cc_pp_non_directive(cc_pp_tok_s **tt);
-static void cc_pp_lparen(cc_pp_tok_s **tt);
-static cc_ptr_list_s *cc_pp_replacement_list(cc_pp_tok_s **tt);
-static void cc_pp_pp_tokens(cc_pp_tok_s **tt);
-static void cc_pp_new_line(cc_pp_tok_s **tt);
-static void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt);
-static void cc_pp_eatws(cc_pp_tok_s **tt);
+static void cc_pp(cc_pp_context_s *context0, cc_toklist_s list);
+static bool cc_pp_ws_seq(cc_tok_s **tt);
+static cc_tok_s *cc_pp_if_section(cc_pp_context_s *context, cc_tok_s *t);
+static void cc_pp_if_group(cc_tok_s **tt);
+static void cc_pp_elif_groups(cc_tok_s **tt);
+static void cc_pp_elif_group(cc_tok_s **tt);
+static void cc_pp_else_groupe(cc_tok_s **tt);
+static void cc_pp_endif_line(cc_tok_s **tt);
+static void cc_pp_control_line(cc_pp_context_s *context, cc_tok_s **tt);
+static void cc_pp_text_line(cc_tok_s **tt);
+static void cc_pp_non_directive(cc_tok_s **tt);
+static void cc_pp_lparen(cc_tok_s **tt);
+static cc_ptr_list_s *cc_pp_replacement_list(cc_tok_s **tt);
+static void cc_pp_pp_tokens(cc_tok_s **tt);
+static void cc_pp_new_line(cc_tok_s **tt);
+static void cc_pp_define(cc_pp_context_s *context, cc_tok_s **tt);
+static void cc_pp_eatws(cc_tok_s **tt);
 
 cc_buf_s cc_pp_parse(cc_pp_context_s *context0, cc_buf_s src) {
 	cc_buf_s phase12;
-	cc_pp_toklist_s list;
+	cc_toklist_s list;
 
 	phase12 = cc_pp_trigraph_lines(src);
 	list = cc_pp_lex(phase12);
@@ -153,12 +152,12 @@ cc_buf_s cc_pp_trigraph_lines(cc_buf_s src) {
 	return result;
 }
 
-cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
+cc_toklist_s cc_pp_lex(cc_buf_s src) {
 	char bck;
 	char *ccheck;
 	char *bptr = src.buf, *fptr = bptr;
 	unsigned lineno = 1;
-	cc_pp_toklist_s list = {
+	cc_toklist_s list = {
 		.head = NULL,
 		.tail = NULL
 	};
@@ -166,7 +165,6 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 	while(*fptr) {
 		switch(*fptr) {
 			case '\n':
-				printf("incrementing lineno to %u\n", lineno + 1);
 				lineno++;
 				cc_pp_addtok(&list, "lf", lineno, CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
 				fptr++;
@@ -307,7 +305,6 @@ cc_pp_toklist_s cc_pp_lex(cc_buf_s src) {
 					fptr += 2;
 					while(*fptr && !(*fptr == '*' && *(fptr + 1) == '/')) {
 						if(*fptr == '\n') {
-							printf("-incrementing lineno to %u\n", lineno + 1);
 							lineno++;
 							cc_pp_addtok(&list, " ", lineno, CCPP_TYPE_WS, CCPP_ATT_NEWLINE);
 						}
@@ -717,8 +714,8 @@ char *cc_pp_identifier(char *fptr, unsigned lineno) {
 	return r;
 }
 
-void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, unsigned lineno, cc_pp_toktype_e type, cc_pp_tokatt_e att) {
-	cc_pp_tok_s *t = cc_alloc(sizeof *t);
+void cc_pp_addtok(cc_toklist_s *list, char *lexeme, unsigned lineno, cc_toktype_e type, cc_tokatt_e att) {
+	cc_tok_s *t = cc_alloc(sizeof *t);
 
 	t->lex = dupstr(lexeme);
 	t->lineno = lineno;
@@ -726,7 +723,7 @@ void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, unsigned lineno, cc_pp_to
 	t->att = att;
 	t->next = NULL;
 	
-	printf("tok: %s\n", t->lex);
+	//printf("tok: %s\n", t->lex);
 
 	if(list->head) {
 		t->prev = list->tail;
@@ -739,15 +736,15 @@ void cc_pp_addtok(cc_pp_toklist_s *list, char *lexeme, unsigned lineno, cc_pp_to
 	list->tail = t;
 }
 
-void cc_pp_printtok(cc_pp_toklist_s *list) {
-	cc_pp_tok_s *t;
+void cc_pp_printtok(cc_toklist_s *list) {
+	cc_tok_s *t;
 
 	for(t = list->head; t; t = t->next) {
 		printf("tok: %s %d %d\n", t->lex, t->type, t->att);
 	}
 }
 
-bool cc_pp_is_hname(cc_pp_tok_s *tail) {
+bool cc_pp_is_hname(cc_tok_s *tail) {
 	if(tail) {
 		if(tail->type == CCPP_TYPE_WS) { 
 			do {
@@ -865,7 +862,7 @@ char *cc_pp_cchar_seq(char *fptr, unsigned lineno) {
 	return fptr + 1;
 }
 
-cc_buf_s cc_pp_read_header_file(cc_pp_tok_s *t) {
+cc_buf_s cc_pp_read_header_file(cc_tok_s *t) {
 	char *path = t->lex;
 	size_t pathlen = strlen(path);
 	cc_buf_s result;
@@ -904,8 +901,8 @@ void cc_pp_init_context(cc_pp_context_s *context) {
 	context->currheader = "root";
 }
 
-void cc_pp(cc_pp_context_s *context0, cc_pp_toklist_s list) {
-	cc_pp_tok_s *t = list.head, *check;
+void cc_pp(cc_pp_context_s *context0, cc_toklist_s list) {
+	cc_tok_s *t = list.head, *check;
 	cc_pp_context_s *context;
 
 	if(context0) {
@@ -917,7 +914,7 @@ void cc_pp(cc_pp_context_s *context0, cc_pp_toklist_s list) {
 	}
 
 	while(t) {
-		check = cc_pp_if_section(t);
+		check = cc_pp_if_section(context, t);
 		if(!check) {
 			if(t->type == CCPP_PUNCTUATOR && t->att == CCPP_ATT_HASH) {
 				cc_pp_control_line(context, &t);
@@ -931,9 +928,9 @@ void cc_pp(cc_pp_context_s *context0, cc_pp_toklist_s list) {
 	}
 }
 
-bool cc_pp_ws_seq(cc_pp_tok_s **tt) {
+bool cc_pp_ws_seq(cc_tok_s **tt) {
 	bool gotlf = false;
-	cc_pp_tok_s *t = *tt;
+	cc_tok_s *t = *tt;
 
 	while(t->type == CCPP_TYPE_WS) {
 		if(t->att == CCPP_ATT_NEWLINE) {
@@ -944,15 +941,18 @@ bool cc_pp_ws_seq(cc_pp_tok_s **tt) {
 	return gotlf;
 }
 
-cc_pp_tok_s *cc_pp_if_section(cc_pp_tok_s *t) {
+cc_tok_s *cc_pp_if_section(cc_pp_context_s *context, cc_tok_s *t) {
 	if(t->type == CCPP_PUNCTUATOR) {
 		if(t->att == CCPP_ATT_HASH) {
+
 			if(!strcmp(t->lex, "if")) {
-				
+							
 			}
 			else if(!strcmp(t->lex, "ifdef")) {
 			}
 			else if(!strcmp(t->lex, "ifndef")) {
+			}
+			else {
 			}
 		} 
 	}
@@ -960,24 +960,24 @@ cc_pp_tok_s *cc_pp_if_section(cc_pp_tok_s *t) {
 	return NULL;
 }
 
-void cc_pp_if_group(cc_pp_tok_s **tt) {
+void cc_pp_if_group(cc_tok_s **tt) {
 		
 }
 
-void cc_pp_elif_groups(cc_pp_tok_s **tt) {
+void cc_pp_elif_groups(cc_tok_s **tt) {
 }
 
-void cc_pp_elif_group(cc_pp_tok_s **tt) {
+void cc_pp_elif_group(cc_tok_s **tt) {
 }
 
-void cc_pp_else_groupe(cc_pp_tok_s **tt) {
+void cc_pp_else_groupe(cc_tok_s **tt) {
 }
 
-void cc_pp_endif_line(cc_pp_tok_s **tt) {
+void cc_pp_endif_line(cc_tok_s **tt) {
 }
 
-void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt) {
-	cc_pp_tok_s *t = *tt;
+void cc_pp_control_line(cc_pp_context_s *context, cc_tok_s **tt) {
+	cc_tok_s *t = *tt;
 
 	t = t->next;
 
@@ -987,7 +987,7 @@ void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 		cc_pp_eatws(&t);
 	
 		if(t->type == CCPP_HEADER_NAME) {
-			cc_pp_tok_s *h = t;
+			cc_tok_s *h = t;
 			t = t->next;
 			cc_pp_eatws(&t);
 			if(ISNL(t)) {	
@@ -1027,17 +1027,17 @@ void cc_pp_control_line(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 	}
 }
 
-void cc_pp_text_line(cc_pp_tok_s **tt) {
+void cc_pp_text_line(cc_tok_s **tt) {
 }
 
-void cc_pp_non_directive(cc_pp_tok_s **tt) {
+void cc_pp_non_directive(cc_tok_s **tt) {
 }
 
-void cc_pp_lparen(cc_pp_tok_s **tt) {
+void cc_pp_lparen(cc_tok_s **tt) {
 }
 
-cc_ptr_list_s *cc_pp_replacement_list(cc_pp_tok_s **tt) {
-	cc_pp_tok_s *t = *tt;
+cc_ptr_list_s *cc_pp_replacement_list(cc_tok_s **tt) {
+	cc_tok_s *t = *tt;
 	cc_ptr_list_s *list = NULL;
 	
 	while(!(ISNL(t))) {
@@ -1052,14 +1052,14 @@ cc_ptr_list_s *cc_pp_replacement_list(cc_pp_tok_s **tt) {
 	return list;
 }
 
-void cc_pp_pp_tokens(cc_pp_tok_s **tt) {
+void cc_pp_pp_tokens(cc_tok_s **tt) {
 }
 
-void cc_pp_new_line(cc_pp_tok_s **tt) {
+void cc_pp_new_line(cc_tok_s **tt) {
 }
 
-void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt) {
-	cc_pp_tok_s *t = *tt, *ident;
+void cc_pp_define(cc_pp_context_s *context, cc_tok_s **tt) {
+	cc_tok_s *t = *tt, *ident;
 	cc_pp_define_s *defdata = cc_allocz(sizeof *defdata);
 
 	t = t->next;
@@ -1109,13 +1109,14 @@ void cc_pp_define(cc_pp_context_s *context, cc_pp_tok_s **tt) {
 		cc_sym_insert(&context->symbols, ident->lex, defdata);
 	}
 	else {
+		printf("Syntax Error: Expected identifier after include directive.\n");
 		//syntax error: Expected identifier after #define directive
 	}
 	*tt = t;
 }
 
-void cc_pp_eatws(cc_pp_tok_s **tt) {
-	cc_pp_tok_s *t = *tt;
+void cc_pp_eatws(cc_tok_s **tt) {
+	cc_tok_s *t = *tt;
 
 	while(true) {
 		if(t->type != CCPP_TYPE_WS ||
